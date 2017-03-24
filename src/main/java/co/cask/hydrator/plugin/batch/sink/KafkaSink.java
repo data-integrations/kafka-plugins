@@ -45,7 +45,6 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
   private static final String BROKER_LIST = "bootstrap.servers";
   private static final String KEY_SERIALIZER = "key.serializer";
   private static final String VAL_SERIALIZER = "value.serializer";
-  private static final String CLIENT_ID = "client.id";
   private static final String ACKS_REQUIRED = "request.required.acks";
 
   public KafkaSink(Config producerConfig) {
@@ -183,8 +182,6 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
       this.format = format;
     }
   }
-
-
 
   private static class KafkaOutputFormatProvider implements OutputFormatProvider {
     private final Map<String, String> conf;
