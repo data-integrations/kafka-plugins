@@ -20,12 +20,9 @@
           }
         },
         {
-          "widget-type": "csv",
-          "label": "Kafka Topics",
-          "name": "topics",
-          "widget-attributes": {
-            "delimiter": ","
-          }
+          "widget-type": "textbox",
+          "label": "Kafka Topic",
+          "name": "topic"
         },
         {
           "widget-type": "select",
@@ -58,13 +55,18 @@
         },
         {
           "widget-type": "textbox",
-          "label": "Partition Field (Partition Based)",
-          "name": "partitionfield"
+          "label": "Message Key field",
+          "name": "key"
         },
         {
           "widget-type": "textbox",
-          "label": "Message Key field",
-          "name": "key"
+          "label": "Kafka Topic",
+          "name": "topic"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Number of kafka topic partitions",
+          "name": "numOfPartitions"
         }
       ]
     }

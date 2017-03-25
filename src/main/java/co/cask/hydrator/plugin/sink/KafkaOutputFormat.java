@@ -1,4 +1,4 @@
-package co.cask.hydrator.plugin.batch.sink;
+package co.cask.hydrator.plugin.sink;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -67,7 +67,7 @@ public class KafkaOutputFormat extends OutputFormat<Text, PartitionMessageWritab
     throws IOException, InterruptedException {
     Configuration configuration = context.getConfiguration();
     // Extract the topics
-    String[] topics = configuration.get("topics").split(",");
+    String topic = configuration.get("topic");
 
     Properties props = new Properties();
 
@@ -84,7 +84,7 @@ public class KafkaOutputFormat extends OutputFormat<Text, PartitionMessageWritab
     //config = new ProducerConfig(props);
     producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
 
-    return new KafkaRecordWriter(producer, topics, isAsync);
+    return new KafkaRecordWriter(producer, topic, isAsync);
   }
 }
 

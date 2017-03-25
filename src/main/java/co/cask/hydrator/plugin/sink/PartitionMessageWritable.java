@@ -1,4 +1,4 @@
-package co.cask.hydrator.plugin.batch.sink;
+package co.cask.hydrator.plugin.sink;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;

@@ -1,4 +1,4 @@
-package co.cask.hydrator.plugin.batch.sink;
+package co.cask.hydrator.plugin.sink;
 
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
@@ -67,7 +67,9 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
   }
 
   @Override
-  public void transform(StructuredRecord input, Emitter<KeyValue<Text, PartitionMessageWritable>> emitter) throws Exception {
+  public void transform(StructuredRecord input, Emitter<KeyValue<Text, PartitionMessageWritable>> emitter)
+    throws Exception {
+    LOG.info("in transform");
     List<Schema.Field> fields = input.getSchema().getFields();
     String body = "";
 
@@ -90,6 +92,7 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
         CSVFormat csvFileFormat;
         switch (producerConfig.format.toLowerCase()) {
           case "csv":
+            LOG.info("Format is CSV");
             csvFileFormat = CSVFormat.Predefined.Default.getFormat();
             printer = new CSVPrinter(writer, csvFileFormat);
             break;
@@ -109,29 +112,24 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
 
     // Message key.
     String key = "no_key";
-
     if (producerConfig.key != null) {
       key = input.get(producerConfig.key);
-
     }
 
-    // Extract the partition key from the record. If the partition key is
-    // Integer then we use it as-is else
-    int partitionKey = 0;
-    if (producerConfig.partitionField != null) {
-      if (input.get(producerConfig.partitionField) != null) {
-        partitionKey = input.get(producerConfig.partitionField).hashCode();
-      }
-    }
+    int numOfPartitions = Integer.parseInt(producerConfig.numOfPartitions);
+    int partitionKey = key.hashCode() % numOfPartitions;
 
+    LOG.info("Emitting records");
     // emit records
-    emitter.emit(new KeyValue<>(new Text(key), new PartitionMessageWritable(new Text(body), new IntWritable(partitionKey))));
+    emitter.emit(new KeyValue<>(new Text(key),
+                                new PartitionMessageWritable(new Text(body), new IntWritable(partitionKey))));
+    LOG.info("Emittedrecords");
   }
 
 
   @Override
   public void destroy() {
-      super.destroy();
+    super.destroy();
   }
 
   /**
@@ -151,34 +149,33 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
     @Macro
     private String async;
 
-    @Name("partitionfield")
-    @Description("Specify field that should be used as partition ID. Should be a int or long")
-    @Macro
-    private String partitionField;
-
     @Name("key")
     @Description("Specify the key field to be used in the message")
     @Macro
     private String key;
 
-    @Name("topics")
-    @Description("List of topics to which message needs to be published")
+    @Name("numOfPartitions")
+    @Description("Specify number of partitions for a topic")
     @Macro
-    private String topics;
+    private String numOfPartitions;
+
+    @Name("topic")
+    @Description("Topic to which message needs to be published")
+    @Macro
+    private String topic;
 
     @Name("format")
     @Description("Format a structured record should be converted to")
     @Macro
     private String format;
 
-    public Config(String brokers, String async, String partitionField, String key, String topics,
-                  String format) {
-      super(String.format("Kafka_%s", topics));
+    public Config(String brokers, String async, String key, String numOfPartitions, String topic, String format) {
+      super(String.format("Kafka_%s", topic));
       this.brokers = brokers;
       this.async = async;
-      this.partitionField = partitionField;
       this.key = key;
-      this.topics = topics;
+      this.numOfPartitions = numOfPartitions;
+      this.topic = topic;
       this.format = format;
     }
   }
@@ -188,7 +185,7 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
 
     KafkaOutputFormatProvider(Config kafktopicsaSinkConfig) {
       this.conf = new HashMap<>();
-      conf.put("topics", kafktopicsaSinkConfig.topics);
+      conf.put("topic", kafktopicsaSinkConfig.topic);
       conf.put(BROKER_LIST, kafktopicsaSinkConfig.brokers);
       conf.put(KEY_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
       conf.put(VAL_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
