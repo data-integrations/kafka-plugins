@@ -25,11 +25,6 @@
           "name": "topic"
         },
         {
-          "widget-type": "textbox",
-          "label": "Number of kafka topic partitions",
-          "name": "numOfPartitions"
-        },
-        {
           "widget-type": "select",
           "label": "Is Async ?",
           "name": "async",
@@ -62,6 +57,11 @@
           "widget-type": "textbox",
           "label": "Message Key field",
           "name": "key"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Number of kafka topic partitions",
+          "name": "numOfPartitions"
         }
       ]
     }
