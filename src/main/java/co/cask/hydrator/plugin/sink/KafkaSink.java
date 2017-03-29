@@ -17,9 +17,9 @@ import co.cask.cdap.format.StructuredRecordStringConverter;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import com.google.common.collect.Lists;
+import org.apache.avro.reflect.Nullable;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,7 @@ import java.util.Map;
 @Plugin(type = BatchSink.PLUGIN_TYPE)
 @Name("KafkaSink")
 @Description("KafkaSink to write events to kafka")
-public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, PartitionMessageWritable> {
+public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaSink.class);
 
   // Configuration for the plugin.
@@ -67,9 +67,8 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
   }
 
   @Override
-  public void transform(StructuredRecord input, Emitter<KeyValue<Text, PartitionMessageWritable>> emitter)
+  public void transform(StructuredRecord input, Emitter<KeyValue<Text, Text>> emitter)
     throws Exception {
-    LOG.info("in transform");
     List<Schema.Field> fields = input.getSchema().getFields();
     String body = "";
 
@@ -92,7 +91,6 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
         CSVFormat csvFileFormat;
         switch (producerConfig.format.toLowerCase()) {
           case "csv":
-            LOG.info("Format is CSV");
             csvFileFormat = CSVFormat.Predefined.Default.getFormat();
             printer = new CSVPrinter(writer, csvFileFormat);
             break;
@@ -116,14 +114,8 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
       key = input.get(producerConfig.key);
     }
 
-    int numOfPartitions = Integer.parseInt(producerConfig.numOfPartitions);
-    int partitionKey = key.hashCode() % numOfPartitions;
-
-    LOG.info("Emitting records");
     // emit records
-    emitter.emit(new KeyValue<>(new Text(key),
-                                new PartitionMessageWritable(new Text(body), new IntWritable(partitionKey))));
-    LOG.info("Emittedrecords");
+    emitter.emit(new KeyValue<>(new Text(key), new Text(body)));
   }
 
 
@@ -150,13 +142,15 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
     private String async;
 
     @Name("key")
-    @Description("Specify the key field to be used in the message")
+    @Description("Specify the key field to be used in the message. Only String Partitioner is supported.")
     @Macro
+    @Nullable
     private String key;
 
     @Name("numOfPartitions")
     @Description("Specify number of partitions for a topic")
     @Macro
+    @Nullable
     private String numOfPartitions;
 
     @Name("topic")
@@ -190,6 +184,7 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
       conf.put(KEY_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
       conf.put(VAL_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
       conf.put("async", kafktopicsaSinkConfig.async);
+      conf.put("numOfPartitions", kafktopicsaSinkConfig.numOfPartitions);
       if (kafktopicsaSinkConfig.async.equalsIgnoreCase("true")) {
         conf.put(ACKS_REQUIRED, "1");
       }

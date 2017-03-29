@@ -17,7 +17,7 @@ import java.util.Properties;
 /**
  * Output format to write to kafka
  */
-public class KafkaOutputFormat extends OutputFormat<Text, PartitionMessageWritable> {
+public class KafkaOutputFormat extends OutputFormat<Text, Text> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaOutputFormat.class);
 
   private KafkaProducer<String, String> producer;
@@ -63,7 +63,7 @@ public class KafkaOutputFormat extends OutputFormat<Text, PartitionMessageWritab
   }
 
   @Override
-  public RecordWriter<Text, PartitionMessageWritable> getRecordWriter(TaskAttemptContext context)
+  public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context)
     throws IOException, InterruptedException {
     Configuration configuration = context.getConfiguration();
     // Extract the topics
@@ -75,13 +75,14 @@ public class KafkaOutputFormat extends OutputFormat<Text, PartitionMessageWritab
     props.put(BROKER_LIST, configuration.get(BROKER_LIST));
     props.put(KEY_SERIALIZER, configuration.get(KEY_SERIALIZER));
     props.put(VAL_SERIALIZER, configuration.get(VAL_SERIALIZER));
+    props.put("numOfPartitions", configuration.get("numOfPartitions"));
+    props.put("partitioner.class", "co.cask.hydrator.plugin.sink.StringPartitioner");
     boolean isAsync = false;
     if (configuration.get("async") != null && configuration.get("async").equalsIgnoreCase("true")) {
       props.put(ACKS_REQUIRED, "1");
       isAsync = true;
     }
 
-    //config = new ProducerConfig(props);
     producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
 
     return new KafkaRecordWriter(producer, topic, isAsync);
