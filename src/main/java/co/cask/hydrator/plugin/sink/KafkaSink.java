@@ -150,7 +150,6 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Text> 
     @Name("numOfPartitions")
     @Description("Specify number of partitions for a topic")
     @Macro
-    @Nullable
     private String numOfPartitions;
 
     @Name("topic")
