@@ -323,7 +323,6 @@
             <instructions>
               <_exportcontents>co.cask.hydrator.plugin.*;
                 org.apache.spark.streaming.kafka.*;
-                org.apache.spark.*;
                 kafka.common;
                 org.apache.spark.streaming.scheduler.*;
                 kafka.serializer.*;
