@@ -6,7 +6,7 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.0-0.8.2.2</version>
 
   <licenses>
     <license>
@@ -231,9 +231,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>2.6</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
@@ -321,12 +321,8 @@
           <extensions>true</extensions>
           <configuration>
             <instructions>
-              <_exportcontents>co.cask.hydrator.plugin.*;
-                org.apache.spark.streaming.kafka.*;
-                kafka.common;
-                org.apache.spark.streaming.scheduler.*;
-                kafka.serializer.*;
-                co.cask.hydrator.common.http</_exportcontents>
+              <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
+                kafka.serializer.*;kafka.common</_exportcontents>
               <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
               <Embed-Transitive>true</Embed-Transitive>
               <Embed-Directory>lib</Embed-Directory>

@@ -6,6 +6,7 @@ Kafka Sink
 CDAP Plugin to write events to kafka. Plugins can be configured for realtime spark streaming pipelines.
 
 * [Kafka Sink](docs/KAFKAWRITER-SINK.md)
+* [Kafka Source](docs/KAFKAWRITER-SINK.md)
 
 Build
 -----

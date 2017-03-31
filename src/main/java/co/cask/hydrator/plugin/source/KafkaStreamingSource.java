@@ -59,6 +59,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * Kafka Streaming source
  */
 @Plugin(type = StreamingSource.PLUGIN_TYPE)
 @Name("KafkaStreamingSource")

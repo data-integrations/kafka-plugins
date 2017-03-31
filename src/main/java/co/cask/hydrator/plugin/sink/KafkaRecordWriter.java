@@ -29,7 +29,7 @@ public class KafkaRecordWriter extends RecordWriter<Text, Text> {
 
   protected void sendMessage(final String key, final String body) {
     if (isAsync) {
-        producer.send(new ProducerRecord<>(topic, 0, key, body), new Callback() {
+        producer.send(new ProducerRecord<>(topic, key, body), new Callback() {
           @Override
           public void onCompletion(RecordMetadata meta, Exception e) {
             if (meta != null) {
@@ -46,7 +46,7 @@ public class KafkaRecordWriter extends RecordWriter<Text, Text> {
     } else {
       // Waits infinitely to push the message through.
       try {
-        producer.send(new ProducerRecord<>(topic, 0, key, body)).get();
+        producer.send(new ProducerRecord<>(topic, key, body)).get();
       } catch (Exception e) {
         LOG.error("Exception while sending data to kafka topic {}, key {}, message {}, e", topic, key, body, e);
       }
@@ -55,7 +55,11 @@ public class KafkaRecordWriter extends RecordWriter<Text, Text> {
 
   @Override
   public void write(Text key, Text value) throws IOException, InterruptedException {
-    sendMessage(key.toString(), value.toString());
+    if (key == null) {
+      sendMessage(null, value.toString());
+    } else {
+      sendMessage(key.toString(), value.toString());
+    }
   }
 
   @Override
