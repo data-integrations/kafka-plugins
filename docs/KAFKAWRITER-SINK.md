@@ -3,32 +3,36 @@
 Kafka Sink
 ==========
 
-CDAP Plugin to write events to kafka in realtime. 
+Kafka sink that allows you to write events into CSV or JSON to kafka. Plugin has the capability to push the data to one or more Kafka topics. 
+It can use one of the field values from input to partition the data on topic. The sink can also be configured to operate in either sync or async mode. 
 
-<img align="center" src="plugin-config.png"  width="400" alt="plugin configuration" />
-
+<img align="center" src="kafka-sink-plugin-config.png"  width="400" alt="plugin configuration" />
 
 Usage Notes
 -----------
 
-Kafka sink plugin that allows you to convert a Structured Record into CSV or JSON.
-Plugin has the capability to push the data to one or more Kafka topics. It can
-use one of the field values from input to partition the data on topic. The sink
-can also be configured to operate in either sync or async mode. 
+Kafka sink emits events in realtime to configured kafka topic and partition. It uses kafka producer [0.8.2 apis](https://kafka.apache.org/082/javadoc/index.html?org/apache/kafka/clients/producer/KafkaProducer.html) to write events into kafka. 
 
-In case of failure the failed event will not be sent to kafka topic for which it failed. 
+This sink can be configured to operate in synchronous or asynchronous mode. In synchronous mode, each event will be sent to the broker synchronously on the thread that calls it. This is no sufficient on most of the high volume environments. 
+In async mode, the kafka producer will batch together all the kafka events for greater throughput. But that makes it open for the possibility of dropping unsent events in case of client machine failure. Since kafka producer by default uses synchronous mode, this sink also uses Synchronous producer by default.
+
+It uses String partitioner and String serializer for key and value to write events to kafka. If optionally kafka key is provided, producer will use that key to partition events accross multiple partitions in a given topic. This sink also allows compression configuration. By default compression is none.
+
+Kafka producer can be tuned using many properties as shown [here](https://kafka.apache.org/082/javadoc/org/apache/kafka/clients/producer/ProducerConfig.html). This sink allows user to configure any property supported by kafka 0.8.2 Producer.
+
 
 Plugin Configuration
 ---------------------
 
 | Configuration | Required | Default | Description |
 | :------------ | :------: | :----- | :---------- |
-| **Kafka Brokers** | **Y** | N/A | This configuration specifies kafka brokers list seperated by comma |
-| **Kafka Topics** | **Y** | N/A | This configuration specifies list of kafka topics separated by comma |
-| **Is Async** | **Y** | N/A | This configuration specifies whether writing the events to broker is *Asynchronous* or *Synchronous*.  |
-| **Message Format** | **Y** | N/A | This configuration specifies the format of the event published to Kafka. |
-| **Partition Field** | **Y** | N/A | This configuration specifies the input fields that need to be used to determine the partition id; the field type should be int or long. |
-| **Message Key Field** | **Y** | N/A | This configuration specifies the input field that should be used as the key for the event published into Kafka. |
+| **Kafka Brokers** | **Y** | N/A | List of Kafka brokers specified in host1:port1,host2:port2 form. |
+| **Kafka Topic** | **Y** | N/A | The Kafka topic to write to. This should be a valid kafka topic string. Kafka topic should already exist. |
+| **Is Async** | **Y** | False | Specifies whether writing the events to broker is *Asynchronous* or *Synchronous*.  |
+| **Compression Type** | **Y** | none | This configuration specifies the format of the event published to Kafka. |
+| **Additional Kafka Producer Properties** | **N** | N/A | Specifies additional kafka producer properties like acks, client.id as key and value pair. |
+| **Message Format** | **Y** | CSV | This configuration specifies serialization format of the event published to Kafka. |
+| **Message Key Field** | **N** | N/A | This configuration specifies the input field that should be used as the key for the event published into Kafka. This field will be used to partition kafka events across multiple partitions of a topic. Key field should be of type string. |
 
 
 Build
@@ -62,11 +66,6 @@ The *cdap-user* mailing list is primarily for users using the product to develop
 applications or building plugins for appplications. You can expect questions from 
 users, release announcements, and any other discussions that we think will be helpful 
 to the users.
-
-## IRC Channel
-
-CDAP IRC Channel: #cdap on irc.freenode.net
-
 
 ## License and Trademarks
 

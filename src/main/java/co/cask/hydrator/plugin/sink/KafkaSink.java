@@ -141,6 +141,7 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Text> 
     @Name("kafkaProperties")
     @Description("Additional kafka producer properties to set")
     @Macro
+    @Nullable
     private String kafkaProperties;
 
     @Name("compressionType")

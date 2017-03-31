@@ -85,10 +85,11 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
       props.put("partitioner.class", "co.cask.hydrator.plugin.sink.StringPartitioner");
     }
 
-    boolean isAsync = false;
     if (configuration.get("async") != null && configuration.get("async").equalsIgnoreCase("true")) {
+      props.put("producer.type", "async");
       props.put(ProducerConfig.ACKS_CONFIG, "1");
-      isAsync = true;
+    } else {
+      props.put("producer.type", "sync");
     }
 
     Map<String, String> valByRegex = configuration.getValByRegex("^additional.");
@@ -104,7 +105,7 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
       producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
     }
 
-    return new KafkaRecordWriter(producer, topic, isAsync);
+    return new KafkaRecordWriter(producer, topic);
   }
 }
 

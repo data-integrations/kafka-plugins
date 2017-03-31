@@ -62,7 +62,7 @@ import java.util.Set;
  * Kafka Streaming source
  */
 @Plugin(type = StreamingSource.PLUGIN_TYPE)
-@Name("KafkaStreamingSource")
+@Name("Kafka")
 @Description("Kafka streaming source.")
 public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRecord> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaStreamingSource.class);

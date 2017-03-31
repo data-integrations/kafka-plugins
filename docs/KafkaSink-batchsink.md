@@ -3,25 +3,51 @@
 
 Description
 -----------
-Kafka sink plugin that allows you to convert a Structured Record into CSV or JSON.
-Plugin has the capability to push the data to one or more Kafka topics. It can
-use one of the field values from input to partition the data on topic. The sink
-can also be configured to operate in either sync or async mode.
+Kafka sink that allows you to write events into CSV or JSON to kafka.
+Plugin has the capability to push the data to a Kafka topic. It can also be
+configured to partition events being written to kafka based on a configurable key. 
+The sink can also be configured to operate in sync or async mode and apply different
+compression types to events.
 
 
 Configuration
 -------------
 **referenceName:** This will be used to uniquely identify this sink for lineage, annotating metadata, etc.
 
-**brokers:** Specifies a list of brokers to connect to.
+**brokers:** List of Kafka brokers specified in host1:port1,host2:port2 form.
+
+**topic:** The Kafka topic to write to.
 
 **async:** Specifies whether writing the events to broker is *Asynchronous* or *Synchronous*.
 
-**partitionfield:** Specifies the input fields that need to be used to determine the partition id; 
-the field type should be int or long.
+**compressionType** Compression type to be applied on message. It can be none, gzip or snappy. Default value is none
 
-**key:** Specifies the input field that should be used as the key for the event published into Kafka.
+**format:** Specifies the format of the event published to Kafka. It can be csv or json. Defualt value is csv.
 
-**topics:** Specifies a list of topics to which the event should be published to.
+**kafkaProperties** Specifies additional kafka producer properties like acks, client.id as key and value pair.
 
-**format:** Specifies the format of the event published to Kafka.
+**key:** Specifies the input field that should be used as the key for the event published into Kafka. 
+It will use String partitioner to determine kafka event should go to which partition. Key field should be of type string.
+
+Example
+-------
+This example writes structured record to kafka topic 'alarm' in asynchronous manner 
+using compression type 'gzip'. The written events will be written in csv format 
+to kafka running at localhost. The Kafka partition will be decided based on the provided key 'ts'.
+Additional properties like number of acknowledgements and client id can also be provided.
+
+
+    {
+        "name": "KafkaSink",
+        "type": "batchsink",
+        "properties": {
+            "referenceName": "KafkaSink",
+            "brokers": "localhost:9092",
+            "topic": "alarm",
+            "async": "FALSE",
+            "compressionType": "gzip",
+            "format": "CSV",
+            "kafkaProperties": "acks:2,client.id:myclient",
+            "key": "message"
+        }
+    }
