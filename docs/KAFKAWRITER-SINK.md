@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/hydrator/kafka-sink.svg?branch=master)](https://travis-ci.org/hydrator/kafka-sink) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Build Status](https://travis-ci.org/hydrator/kafka-plugins.svg?branch=master)](https://travis-ci.org/hydrator/kafka-plugins) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Kafka Sink
 ==========
@@ -50,11 +50,11 @@ Deployment
 ----------
 You can deploy your plugins using the CDAP CLI:
 
-    > load artifact <target/kafka-sink-<version>.jar config-file <target/kafka-sink<version>.json>
+    > load artifact <target/kafka-plugins-<version>.jar config-file <target/kafka-plugins<version>.json>
 
-For example, if your artifact is named 'kafka-sink-<version>':
+For example, if your artifact is named 'kafka-plugins-<version>':
 
-    > load artifact target/kafka-sink-<version>.jar config-file target/kafka-sink-<version>.json
+    > load artifact target/kafka-plugins-<version>.jar config-file target/kafka-plugins-<version>.json
     
 ## Mailing Lists
 
