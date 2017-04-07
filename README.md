@@ -5,9 +5,7 @@ Kafka Plugins
 
 Kafka source and sink to read/write events to/from kafka. 
 
-<img align="center" src="docs/plugin-config.png"  width="400" alt="plugin configuration" />
-
-* [Kafka Source](docs/KAFKASOURCE-SINK.md)
+* [Kafka Source](docs/KAFKASOURCE.md)
 * [Kafka Sink](docs/KAFKAWRITER-SINK.md)
 
 Build
