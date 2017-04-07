@@ -1,4 +1,4 @@
-package co.cask.hydrator.plugin.batch.sink;
+package co.cask.hydrator.plugin.sink;
 
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
@@ -14,17 +14,17 @@ import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.batch.BatchSink;
 import co.cask.cdap.etl.api.batch.BatchSinkContext;
 import co.cask.cdap.format.StructuredRecordStringConverter;
+import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.avro.reflect.Nullable;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,21 +35,24 @@ import java.util.Map;
 @Plugin(type = BatchSink.PLUGIN_TYPE)
 @Name("KafkaSink")
 @Description("KafkaSink to write events to kafka")
-public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, PartitionMessageWritable> {
+public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaSink.class);
 
   // Configuration for the plugin.
   private final Config producerConfig;
 
+  private final KafkaOutputFormatProvider kafkaOutputFormatProvider;
+
   // Static constants for configuring Kafka producer.
   private static final String BROKER_LIST = "bootstrap.servers";
   private static final String KEY_SERIALIZER = "key.serializer";
   private static final String VAL_SERIALIZER = "value.serializer";
-  private static final String ACKS_REQUIRED = "request.required.acks";
+  private static final String ACKS_REQUIRED = "acks";
 
   public KafkaSink(Config producerConfig) {
     super(producerConfig);
     this.producerConfig = producerConfig;
+    this.kafkaOutputFormatProvider = new KafkaOutputFormatProvider(producerConfig);
   }
 
   @Override
@@ -63,75 +66,43 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
 
   @Override
   public void prepareRun(BatchSinkContext context) throws Exception {
-    context.addOutput(Output.of(producerConfig.referenceName, new KafkaOutputFormatProvider(producerConfig)));
+    context.addOutput(Output.of(producerConfig.referenceName, kafkaOutputFormatProvider));
   }
 
   @Override
-  public void transform(StructuredRecord input, Emitter<KeyValue<Text, PartitionMessageWritable>> emitter) throws Exception {
+  public void transform(StructuredRecord input, Emitter<KeyValue<Text, Text>> emitter)
+    throws Exception {
     List<Schema.Field> fields = input.getSchema().getFields();
-    String body = "";
 
-    // Depending on the configuration create a body that needs to be
-    // built and pushed to Kafka.
-
-    if (producerConfig.format.equalsIgnoreCase("JSON")){
-      body = StructuredRecordStringConverter.toJsonString(input);
-    }else{
-      // Extract all values from the structured record
-      List<Object> objs = Lists.newArrayList();
-      for (Schema.Field field : fields) {
-        objs.add(input.get(field.getName()));
+      String body;
+      if (producerConfig.format.equalsIgnoreCase("json")) {
+        body = StructuredRecordStringConverter.toJsonString(input);
+      } else {
+        List<Object> objs = getExtractedValues(input, fields);
+        body = StringUtils.join(objs, ",");
       }
 
-      StringWriter writer = new StringWriter();
-      CSVPrinter printer = null;
-
-      try {
-        CSVFormat csvFileFormat;
-        switch (producerConfig.format.toLowerCase()) {
-          case "csv":
-            csvFileFormat = CSVFormat.Predefined.Default.getFormat();
-            printer = new CSVPrinter(writer, csvFileFormat);
-            break;
-        }
-
-        if (printer != null) {
-          printer.printRecord(objs);
-          body = writer.toString();
-        }
-
-      } finally {
-        if (printer != null) {
-          printer.close();
-        }
+      if (Strings.isNullOrEmpty(producerConfig.key)) {
+        emitter.emit(new KeyValue<>((Text) null, new Text(body)));
+      } else {
+        String key = input.get(producerConfig.key);
+        emitter.emit(new KeyValue<>(new Text(key), new Text(body)));
       }
+  }
+
+  private List<Object> getExtractedValues(StructuredRecord input, List<Schema.Field> fields) {
+    // Extract all values from the structured record
+    List<Object> objs = Lists.newArrayList();
+    for (Schema.Field field : fields) {
+      objs.add(input.get(field.getName()));
     }
-
-    // Message key.
-    String key = "no_key";
-
-    if (producerConfig.key != null) {
-      key = input.get(producerConfig.key);
-
-    }
-
-    // Extract the partition key from the record. If the partition key is
-    // Integer then we use it as-is else
-    int partitionKey = 0;
-    if (producerConfig.partitionField != null) {
-      if (input.get(producerConfig.partitionField) != null) {
-        partitionKey = input.get(producerConfig.partitionField).hashCode();
-      }
-    }
-
-    // emit records
-    emitter.emit(new KeyValue<>(new Text(key), new PartitionMessageWritable(new Text(body), new IntWritable(partitionKey))));
+    return objs;
   }
 
 
   @Override
   public void destroy() {
-      super.destroy();
+    super.destroy();
   }
 
   /**
@@ -151,50 +122,79 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Partit
     @Macro
     private String async;
 
-    @Name("partitionfield")
-    @Description("Specify field that should be used as partition ID. Should be a int or long")
-    @Macro
-    private String partitionField;
-
     @Name("key")
-    @Description("Specify the key field to be used in the message")
+    @Description("Specify the key field to be used in the message. Only String Partitioner is supported.")
     @Macro
+    @Nullable
     private String key;
 
-    @Name("topics")
-    @Description("List of topics to which message needs to be published")
+    @Name("topic")
+    @Description("Topic to which message needs to be published")
     @Macro
-    private String topics;
+    private String topic;
 
     @Name("format")
     @Description("Format a structured record should be converted to")
     @Macro
     private String format;
 
-    public Config(String brokers, String async, String partitionField, String key, String topics,
-                  String format) {
-      super(String.format("Kafka_%s", topics));
+    @Name("kafkaProperties")
+    @Description("Additional kafka producer properties to set")
+    @Macro
+    @Nullable
+    private String kafkaProperties;
+
+    @Name("compressionType")
+    @Description("Additional kafka producer properties to set")
+    @Macro
+    private String compressionType;
+
+    public Config(String brokers, String async, String key, String topic, String format, String kafkaProperties,
+                  String compressionType) {
+      super(String.format("Kafka_%s", topic));
       this.brokers = brokers;
       this.async = async;
-      this.partitionField = partitionField;
       this.key = key;
-      this.topics = topics;
+      this.topic = topic;
       this.format = format;
+      this.kafkaProperties = kafkaProperties;
+      this.compressionType = compressionType;
     }
   }
 
   private static class KafkaOutputFormatProvider implements OutputFormatProvider {
     private final Map<String, String> conf;
 
-    KafkaOutputFormatProvider(Config kafktopicsaSinkConfig) {
+    KafkaOutputFormatProvider(Config kafkaSinkConfig) {
       this.conf = new HashMap<>();
-      conf.put("topics", kafktopicsaSinkConfig.topics);
-      conf.put(BROKER_LIST, kafktopicsaSinkConfig.brokers);
+      conf.put("topic", kafkaSinkConfig.topic);
+
+      conf.put(BROKER_LIST, kafkaSinkConfig.brokers);
+      conf.put("compression.type", kafkaSinkConfig.compressionType);
       conf.put(KEY_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
       conf.put(VAL_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
-      conf.put("async", kafktopicsaSinkConfig.async);
-      if (kafktopicsaSinkConfig.async.equalsIgnoreCase("true")) {
+
+      addKafkaProperties(kafkaSinkConfig.kafkaProperties);
+
+      conf.put("async", kafkaSinkConfig.async);
+      if (kafkaSinkConfig.async.equalsIgnoreCase("true")) {
         conf.put(ACKS_REQUIRED, "1");
+      }
+
+      if (!Strings.isNullOrEmpty(kafkaSinkConfig.key)) {
+        conf.put("hasKey", kafkaSinkConfig.key);
+      }
+    }
+
+    private void addKafkaProperties(String kafkaProperties) {
+      KeyValueListParser kvParser = new KeyValueListParser("\\s*,\\s*", ":");
+      if (!Strings.isNullOrEmpty(kafkaProperties)) {
+        for (KeyValue<String, String> keyVal : kvParser.parse(kafkaProperties)) {
+          // add prefix to each property
+          String key = "additional." + keyVal.getKey();
+          String val = keyVal.getValue();
+          conf.put(key, val);
+        }
       }
     }
 

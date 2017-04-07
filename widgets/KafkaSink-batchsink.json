@@ -20,12 +20,9 @@
           }
         },
         {
-          "widget-type": "csv",
-          "label": "Kafka Topics",
-          "name": "topics",
-          "widget-attributes": {
-            "delimiter": ","
-          }
+          "widget-type": "textbox",
+          "label": "Kafka Topic",
+          "name": "topic"
         },
         {
           "widget-type": "select",
@@ -37,6 +34,29 @@
               "FALSE"
             ],
             "default": "FALSE"
+          }
+        },
+        {
+          "widget-type": "select",
+          "label": "Compression type",
+          "name": "compressionType",
+          "widget-attributes": {
+            "values": [
+              "none",
+              "gzip",
+              "snappy"
+            ],
+            "default": "none"
+          }
+        },
+        {
+          "widget-type": "keyvalue",
+          "label": "Additional Kafka Producer Properties",
+          "name": "kafkaProperties",
+          "widget-attributes": {
+            "showDelimiter": "false",
+            "key-placeholder": "Kafka producer property",
+            "value-placeholder": "Kafka producer property value"
           }
         }
       ]
@@ -55,11 +75,6 @@
             ],
             "default": "CSV"
           }
-        },
-        {
-          "widget-type": "textbox",
-          "label": "Partition Field (Partition Based)",
-          "name": "partitionfield"
         },
         {
           "widget-type": "textbox",
