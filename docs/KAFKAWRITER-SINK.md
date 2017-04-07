@@ -16,7 +16,7 @@ Kafka sink emits events in realtime to configured kafka topic and partition. It 
 This sink can be configured to operate in synchronous or asynchronous mode. In synchronous mode, each event will be sent to the broker synchronously on the thread that calls it. This is no sufficient on most of the high volume environments. 
 In async mode, the kafka producer will batch together all the kafka events for greater throughput. But that makes it open for the possibility of dropping unsent events in case of client machine failure. Since kafka producer by default uses synchronous mode, this sink also uses Synchronous producer by default.
 
-It uses String partitioner and String serializer for key and value to write events to kafka. If optionally kafka key is provided, producer will use that key to partition events accross multiple partitions in a given topic. This sink also allows compression configuration. By default compression is none.
+It uses String partitioner and String serializer for key and value to write events to kafka. Optionally if kafka key is provided, producer will use that key to partition events accross multiple partitions in a given topic. This sink also allows compression configuration. By default compression is none.
 
 Kafka producer can be tuned using many properties as shown [here](https://kafka.apache.org/082/javadoc/org/apache/kafka/clients/producer/ProducerConfig.html). This sink allows user to configure any property supported by kafka 0.8.2 Producer.
 
