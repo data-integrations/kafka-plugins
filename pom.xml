@@ -6,7 +6,7 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.0.0-0.8.2.2</version>
+  <version>1.6.1-0.8.2.2</version>
 
   <licenses>
     <license>

@@ -5,7 +5,7 @@ Description
 -----------
 Kafka streaming source. Emits a record with the schema specified by the user. If no schema
 is specified, it will emit a record with two fields: 'key' (nullable string) and 'message'
-(bytes).
+(bytes). Kafka source is compatible with Kafka 0.8, 0.9 and 0.10
 
 
 Use Case

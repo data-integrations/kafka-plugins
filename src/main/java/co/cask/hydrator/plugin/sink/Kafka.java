@@ -33,10 +33,10 @@ import java.util.Map;
  * Kafka sink to write to Kafka
  */
 @Plugin(type = BatchSink.PLUGIN_TYPE)
-@Name("KafkaSink")
+@Name("Kafka")
 @Description("KafkaSink to write events to kafka")
-public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
-  private static final Logger LOG = LoggerFactory.getLogger(KafkaSink.class);
+public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
+  private static final Logger LOG = LoggerFactory.getLogger(Kafka.class);
 
   // Configuration for the plugin.
   private final Config producerConfig;
@@ -49,7 +49,7 @@ public class KafkaSink extends ReferenceBatchSink<StructuredRecord, Text, Text> 
   private static final String VAL_SERIALIZER = "value.serializer";
   private static final String ACKS_REQUIRED = "acks";
 
-  public KafkaSink(Config producerConfig) {
+  public Kafka(Config producerConfig) {
     super(producerConfig);
     this.producerConfig = producerConfig;
     this.kafkaOutputFormatProvider = new KafkaOutputFormatProvider(producerConfig);
