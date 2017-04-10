@@ -5,7 +5,7 @@ Description
 -----------
 Kafka batch source. Emits the record from kafka. It will emit a record based on the schema and format 
 you use, or if no schema or format is specified, the message payload will be emitted. The source will 
-remember the offset it read last run and continue from that offset for the next run
+remember the offset it read last run and continue from that offset for the next run.
 
 Use Case
 --------

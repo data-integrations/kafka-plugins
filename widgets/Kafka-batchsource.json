@@ -26,7 +26,7 @@
         },
         {
           "widget-type": "textbox",
-          "label": "Offset table name",
+          "label": "Offset Table Name",
           "name": "tableName"
         },
         {
