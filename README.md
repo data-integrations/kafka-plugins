@@ -6,6 +6,7 @@ Kafka Plugins
 Kafka source and sink to read/write events to/from kafka. These plugins are compatible with Kafka 0.8, 0.9 and 0.10
 
 * [Kafka Source](docs/KAFKASOURCE.md)
+* [Kafka Batch Source](docs/KAFKABATCHSOURCE.md)
 * [Kafka Sink](docs/KAFKAWRITER-SINK.md)
 
 Build
