@@ -6,7 +6,7 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.6.1-0.8.2.2</version>
+  <version>1.7.0-0.8.2.2-SNAPSHOT</version>
 
   <licenses>
     <license>
@@ -58,7 +58,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.1.0</cdap.version>
+    <cdap.version>4.2.0-SNAPSHOT</cdap.version>
+    <hydrator.version>1.6.1</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
@@ -73,40 +74,40 @@
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-etl-api</artifactId>
-      <version>4.1.0</version>
+      <version>${cdap.version}</version>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-etl-api-spark</artifactId>
-      <version>4.1.0</version>
+      <version>${cdap.version}</version>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-formats</artifactId>
-      <version>4.1.0</version>
+      <version>${cdap.version}</version>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>hydrator-test</artifactId>
-      <version>4.1.0</version>
+      <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-data-pipeline</artifactId>
-      <version>4.1.0</version>
+      <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-data-streams</artifactId>
-      <version>4.1.0</version>
-      <scope>provided</scope>
+      <version>${cdap.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.hydrator</groupId>
       <artifactId>hydrator-common</artifactId>
-      <version>1.6.0</version>
+      <version>${hydrator.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
