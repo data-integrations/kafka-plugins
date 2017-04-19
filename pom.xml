@@ -6,7 +6,7 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.7.0-0.8.2.2-SNAPSHOT</version>
+  <version>1.7.0-SNAPSHOT-0.8.2.2</version>
 
   <licenses>
     <license>
@@ -66,7 +66,7 @@
     <kafka.version>0.8.2.2</kafka.version>
     <hadoop.version>2.3.0</hadoop.version>
     <!-- properties for script build step that creates the config files for the artifacts -->
-    <app.parents>system:cdap-data-streams[4.1.0,5.0.0),system:cdap-data-pipeline[4.1.0,5.0.0)</app.parents>
+    <app.parents>system:cdap-data-streams[4.2.0-SNAPSHOT,5.0.0),system:cdap-data-pipeline[4.2.0-SNAPSHOT,5.0.0)</app.parents>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
 

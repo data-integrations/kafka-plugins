@@ -62,6 +62,8 @@ If set, this field must be present in the schema property and must be an int.
 If this is not set, no offset field will be added to output records.
 If set, this field must be present in the schema property and must be a long.
 
+**maxRatePerPartition:** Maximum number of records to read per second per partition. Defaults to 1000.
+
 
 Example
 -------
