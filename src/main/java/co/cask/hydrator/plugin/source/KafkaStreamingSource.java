@@ -78,6 +78,11 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     super.configurePipeline(pipelineConfigurer);
     conf.validate();
     pipelineConfigurer.getStageConfigurer().setOutputSchema(conf.getSchema());
+    if (conf.getMaxRatePerPartition() > 0) {
+      Map<String, String> pipelineProperties = new HashMap<>();
+      pipelineProperties.put("spark.streaming.kafka.maxRatePerPartition", conf.getMaxRatePerPartition().toString());
+      pipelineConfigurer.setPipelineProperties(pipelineProperties);
+    }
   }
 
   @Override

@@ -113,9 +113,14 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   @Nullable
   private String offsetField;
 
+  @Description("Max number of records to read per second per partition. 0 means there is no limit. Defaults to 1000.")
+  @Nullable
+  private Integer maxRatePerPartition;
+
   public KafkaConfig() {
     super("");
     defaultInitialOffset = -1L;
+    maxRatePerPartition = 1000;
   }
 
   @VisibleForTesting
@@ -173,6 +178,11 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   @Nullable
   public String getFormat() {
     return Strings.isNullOrEmpty(format) ? null : format;
+  }
+
+  @Nullable
+  public Integer getMaxRatePerPartition() {
+    return maxRatePerPartition;
   }
 
   public Schema getSchema() {
@@ -331,6 +341,11 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     getBrokerMap();
     getPartitions();
     getInitialPartitionOffsets(getPartitions());
+
+    if (maxRatePerPartition < 0) {
+      throw new IllegalArgumentException(String.format("Invalid maxRatePerPartition %d. Rate must be 0 or greater.",
+                                                       maxRatePerPartition));
+    }
 
     if (!Strings.isNullOrEmpty(timeField) && !Strings.isNullOrEmpty(keyField) && timeField.equals(keyField)) {
       throw new IllegalArgumentException(String.format(

@@ -66,6 +66,14 @@
           "widget-type": "textbox",
           "label": "Offset Field",
           "name": "offsetField"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Max Rate Per Partition",
+          "name": "maxRatePerPartition",
+          "widget-attributes": {
+            "default": "1000"
+          }
         }
       ]
     },
