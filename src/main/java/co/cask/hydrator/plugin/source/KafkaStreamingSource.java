@@ -28,6 +28,8 @@ import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.streaming.StreamingContext;
 import co.cask.cdap.etl.api.streaming.StreamingSource;
 import co.cask.cdap.format.RecordFormats;
+import co.cask.cdap.format.StructuredRecordStringConverter;
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import kafka.api.OffsetRequest;
 import kafka.api.PartitionOffsetRequestInfo;
@@ -40,16 +42,23 @@ import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndMetadata;
 import kafka.serializer.DefaultDecoder;
+import org.apache.avro.SchemaNormalization;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.Function3;
+import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.streaming.State;
+import org.apache.spark.streaming.StateSpec;
 import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Tuple2;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,6 +75,13 @@ import java.util.Set;
 @Description("Kafka streaming source.")
 public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRecord> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaStreamingSource.class);
+
+  private static final Schema CACHE_SCHEMA = Schema.recordOf("state",
+                                                             Schema.Field.of("data",
+                                                                             Schema.mapOf(Schema.of(Schema.Type.LONG),
+                                                                                          Schema.of(Schema.Type.STRING))));
+  private static final Schema DML_SCHEMA = Schema.recordOf("DMLRecord", Schema.Field.of("message", Schema.of(Schema.Type.BYTES)),
+                                                           Schema.Field.of("staterecord", CACHE_SCHEMA));
   private final KafkaConfig conf;
 
   public KafkaStreamingSource(KafkaConfig conf) {
@@ -81,9 +97,10 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     if (conf.getMaxRatePerPartition() > 0) {
       Map<String, String> pipelineProperties = new HashMap<>();
       pipelineProperties.put("spark.streaming.kafka.maxRatePerPartition", conf.getMaxRatePerPartition().toString());
-      pipelineConfigurer.setPipelineProperties(pipelineProperties);
+      // pipelineConfigurer.setPipelineProperties(pipelineProperties);
     }
   }
+
 
   @Override
   public JavaDStream<StructuredRecord> getStream(StreamingContext context) throws Exception {
@@ -133,6 +150,50 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
       }
       LOG.info("Using initial offsets {}", offsets);
 
+      Function3<String, Optional<StructuredRecord>, State<Map<Long, String>>, StructuredRecord> mapFunction
+        = new Function3<String, Optional<StructuredRecord>, State<Map<Long, String>>, StructuredRecord>() {
+        @Override
+        public StructuredRecord call(String key, Optional<StructuredRecord> value, State<Map<Long, String>> mapState) throws Exception {
+          if (mapState.exists()) {
+            LOG.info("Current map state is {}", mapState.get());
+          } else {
+            LOG.info("Map state does not exists yet.");
+          }
+          StructuredRecord record = value.get();
+          byte[] message = record.get("message");
+          String messageBody = new String(message, StandardCharsets.UTF_8);
+          LOG.info("XXX Received message body in mapped function is  {}", messageBody);
+          if (messageBody.contains("generic_wrapper") && messageBody.contains("oracle.goldengate")) {
+            return record;
+          }
+          if (messageBody.contains("\"type\" : \"record\"")) {
+            org.apache.avro.Schema avroSchema = new org.apache.avro.Schema.Parser().parse(messageBody);
+            long schemaFingerPrint = SchemaNormalization.parsingFingerprint64(avroSchema);
+            Map<Long, String> state;
+            if (mapState.exists()) {
+              state = mapState.get();
+            } else {
+              state = new HashMap<>();
+            }
+            state.put(schemaFingerPrint, messageBody);
+            mapState.update(state);
+            LOG.info("Current map state is {}", mapState.get());
+            return record;
+          }
+
+          StructuredRecord.Builder cacheBuilder = StructuredRecord.builder(CACHE_SCHEMA);
+          cacheBuilder.set("data", mapState.get());
+
+          StructuredRecord.Builder builder = StructuredRecord.builder(DML_SCHEMA);
+          builder.set("message", record.get("message"));
+          builder.set("staterecord", cacheBuilder.build());
+
+          StructuredRecord toReturn = builder.build();
+          LOG.info("Returning Structured record {}", StructuredRecordStringConverter.toJsonString(toReturn));
+          return toReturn;
+        }
+      };
+
       return KafkaUtils.createDirectStream(
         context.getSparkStreamingContext(), byte[].class, byte[].class, DefaultDecoder.class, DefaultDecoder.class,
         MessageAndMetadata.class, kafkaParams, offsets,
@@ -141,7 +202,12 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
           public MessageAndMetadata call(MessageAndMetadata<byte[], byte[]> in) throws Exception {
             return in;
           }
-        }).transform(new RecordTransform(conf));
+        }).transform(new RecordTransform(conf)).mapToPair(new PairFunction<StructuredRecord, String, StructuredRecord>() {
+        @Override
+        public Tuple2<String, StructuredRecord> call(StructuredRecord structuredRecord) throws Exception {
+          return new Tuple2<>("", structuredRecord);
+        }
+      }).mapWithState(StateSpec.function(mapFunction));
     } finally {
       for (SimpleConsumer consumer : consumers) {
         try {
