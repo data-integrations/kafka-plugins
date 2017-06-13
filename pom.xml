@@ -338,7 +338,7 @@
           <configuration>
             <instructions>
               <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
-                kafka.serializer.*;kafka.common</_exportcontents>
+                kafka.serializer.*;kafka.common;kafka.message</_exportcontents>
               <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
               <Embed-Transitive>true</Embed-Transitive>
               <Embed-Directory>lib</Embed-Directory>
