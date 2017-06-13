@@ -58,7 +58,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.2.0-SNAPSHOT</cdap.version>
+    <cdap.version>4.3.0-SNAPSHOT</cdap.version>
     <hydrator.version>1.6.1</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
@@ -323,7 +323,7 @@
           <configuration>
             <instructions>
               <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
-                kafka.serializer.*;kafka.common</_exportcontents>
+                kafka.serializer.*;kafka.common;kafka.message</_exportcontents>
               <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
               <Embed-Transitive>true</Embed-Transitive>
               <Embed-Directory>lib</Embed-Directory>
