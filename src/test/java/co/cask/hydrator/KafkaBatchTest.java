@@ -68,7 +68,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Unit tests for our plugins.
  */
-public class PipelineTest extends HydratorTestBase {
+public class KafkaBatchTest extends HydratorTestBase {
   private static final ArtifactSummary APP_ARTIFACT = new ArtifactSummary("data-pipeline", "1.0.0");
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
