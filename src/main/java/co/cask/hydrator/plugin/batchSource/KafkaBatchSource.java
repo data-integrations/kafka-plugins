@@ -88,6 +88,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     @Description("Table name to track the latest offset we read from kafka. It is recommended to name it " +
       "same as the pipeline name to avoid conflict on table names.")
+    @Macro
+    @Nullable
     private String tableName;
 
     @Description("The topic partitions to read from. If not specified, all partitions will be read.")
@@ -304,7 +306,10 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     }
 
     public void validate() {
-      getBrokerMap();
+      // brokers can be null since it is macro enabled.
+      if (kafkaBrokers != null) {
+        getBrokerMap();
+      }
       getPartitions();
       getInitialPartitionOffsets();
 
@@ -352,7 +357,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    pipelineConfigurer.createDataset(config.getTableName(), KeyValueTable.class, DatasetProperties.EMPTY);
+    if (config.getTableName() != null) {
+      pipelineConfigurer.createDataset(config.getTableName(), KeyValueTable.class, DatasetProperties.EMPTY);
+    }
     config.validate();
     pipelineConfigurer.getStageConfigurer().setOutputSchema(config.getSchema());
   }
@@ -361,7 +368,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   public void prepareRun(BatchSourceContext context) throws Exception {
     Job job = JobUtils.createInstance();
     Configuration conf = job.getConfiguration();
-    table = context.getDataset(config.getTableName());
+    String tableName = config.getTableName() != null ? config.getTableName() : config.getTopic();
+    if (!context.datasetExists(tableName)) {
+      context.createDataset(tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
+    }
+    table = context.getDataset(tableName);
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), config.getBrokerMap(),
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        table);
