@@ -338,7 +338,10 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   }
 
   public void validate() {
-    getBrokerMap();
+    // brokers can be null since it is macro enabled.
+    if (brokers != null) {
+      getBrokerMap();
+    }
     getPartitions();
     getInitialPartitionOffsets(getPartitions());
 

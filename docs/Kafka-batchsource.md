@@ -21,8 +21,8 @@ Properties
 
 **topic:** The Kafka topic to read from. (Macro-enabled)
 
-**tableName:** Table name to track the latest offset we read from kafka. It is recommended to name it same as the 
-pipeline name to avoid conflict on table names.
+**tableName:** Optional table name to track the latest offset we read from kafka. It is recommended to name it same as the 
+pipeline name to avoid conflict on table names. By default it will be the topic name. (Macro-enabled)
 
 **partitions:** List of topic partitions to read from. If not specified, all partitions will be read. (Macro-enabled)
 
