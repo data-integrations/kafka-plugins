@@ -21,7 +21,7 @@ Plugin Configuration
 | :------------ | :------: | :----- | :---------- |
 | **Kafka Brokers** | **Y** | N/A | List of Kafka brokers specified in host1:port1,host2:port2 form. |
 | **Kafka Topic** | **Y** | N/A | The Kafka topic to read from. |
-| **Offset Table Name** | **Y** | N/A | Table name to track the latest offset we read from kafka. It is recommended to name it same as the pipeline name to avoid conflict on table names. |
+| **Offset Table Name** | **Y** | N/A | Optional table name to track the latest offset we read from kafka. It is recommended to name it same as the pipeline name to avoid conflict on table names. By default it will be the topic name.
 | **Topic Partition** | **N** | N/A | List of topic partitions to read from. If not specified, all partitions will be read.  |
 | **Initial Partition Offsets** | **N** | N/A | The initial offset for each topic partition. If this is not specified, earliest offset will be used. This offset will only be used for the first run of the pipeline. Any subsequent run will read from the latest offset from previous run.  Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. |
 | **Key Field** | **N** | N/A | Optional name of the field containing the message key. If this is not set, no key field will be added to output records. If set, this field must be present in the schema property and must be bytes. |
