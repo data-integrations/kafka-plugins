@@ -83,7 +83,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   public static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic, Map<String, Integer> brokers,
                                                      Set<Integer> partitions,
                                                      Map<TopicAndPartition, Long> initOffsets,
-                                                     KeyValueTable table) throws Exception {
+                                                     KeyValueTable table, String tableKeyPrefix) throws Exception {
     ArrayList<KafkaRequest> finalRequests;
     HashMap<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo = new HashMap<>();
 
@@ -110,7 +110,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     }
 
     // Get the latest offsets and generate the KafkaRequests
-    finalRequests = fetchLatestOffsetAndCreateKafkaRequests(offsetRequestInfo, initOffsets, table);
+    finalRequests = fetchLatestOffsetAndCreateKafkaRequests(offsetRequestInfo, initOffsets, table, tableKeyPrefix);
 
     Collections.sort(finalRequests, new Comparator<KafkaRequest>() {
       @Override
@@ -181,7 +181,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   private static ArrayList<KafkaRequest> fetchLatestOffsetAndCreateKafkaRequests(
     Map<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo,
     Map<TopicAndPartition, Long> offsets,
-    KeyValueTable table) {
+    KeyValueTable table,
+    String tableKeyPrefix) {
     ArrayList<KafkaRequest> finalRequests = new ArrayList<>();
     for (LeaderInfo leader : offsetRequestInfo.keySet()) {
       Long latestTime = kafka.api.OffsetRequest.LatestTime();
@@ -213,7 +214,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
       for (TopicAndPartition topicAndPartition : topicAndPartitions) {
         long latestOffset = latestOffsetResponse.offsets(topicAndPartition.topic(), topicAndPartition.partition())[0];
         Long start;
-        byte[] tableStart = table.read(topicAndPartition.toString());
+        String key = tableKeyPrefix + topicAndPartition.toString();
+        byte[] tableStart = table.read(key);
         if (tableStart != null) {
           start = Bytes.toLong(tableStart);
         } else {
