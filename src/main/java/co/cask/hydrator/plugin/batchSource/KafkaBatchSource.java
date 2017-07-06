@@ -64,6 +64,7 @@ import javax.annotation.Nullable;
 @Description("Kafka batch source.")
 public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, StructuredRecord> {
   public static final String NAME = "Kafka";
+  private static final String OFFSET_TABLE_NAME = "__kafka_batch_source_offsets";
 
   private final KafkaBatchConfig config;
   private KeyValueTable table;
@@ -86,8 +87,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Macro
     private String kafkaBrokers;
 
-    @Description("Table name to track the latest offset we read from kafka. It is recommended to name it " +
-      "same as the pipeline name to avoid conflict on table names.")
+    @Description("Optional table name to track the latest offsets read from Kafka. Stores offsets using a composite " +
+      "key of reference name, topic name and partition. Only change this table name if you would like to ignore the " +
+      "offsets read from a Kafka topic by a previous run using the Kafka Batch Source.")
     @Macro
     @Nullable
     private String tableName;
@@ -368,14 +370,14 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   public void prepareRun(BatchSourceContext context) throws Exception {
     Job job = JobUtils.createInstance();
     Configuration conf = job.getConfiguration();
-    String tableName = config.getTableName() != null ? config.getTableName() : config.getTopic();
+    String tableName = config.getTableName() != null ? config.getTableName() : OFFSET_TABLE_NAME;
     if (!context.datasetExists(tableName)) {
       context.createDataset(tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
     }
     table = context.getDataset(tableName);
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), config.getBrokerMap(),
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
-                                                       table);
+                                                       table, config.referenceName);
     context.setInput(Input.of(config.referenceName,
                               new SourceInputFormatProvider(KafkaInputFormat.class, conf)));
   }
@@ -386,7 +388,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       for (KafkaRequest kafkaRequest : kafkaRequests) {
         TopicAndPartition topicAndPartition = new TopicAndPartition(kafkaRequest.getTopic(),
                                                                     kafkaRequest.getPartition());
-        table.write(topicAndPartition.toString(), Bytes.toBytes(kafkaRequest.getLastOffset()));
+        String key = config.referenceName + topicAndPartition.toString();
+        table.write(key, Bytes.toBytes(kafkaRequest.getLastOffset()));
       }
     }
   }

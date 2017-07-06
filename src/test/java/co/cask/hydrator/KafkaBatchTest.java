@@ -172,7 +172,7 @@ public class KafkaBatchTest extends HydratorTestBase {
     Assert.assertEquals(expected, actual);
     DataSetManager<KeyValueTable> kvTable = getDataset("testKafkaSource");
     KeyValueTable table = kvTable.get();
-    byte[] offset = table.read(new TopicAndPartition("users", 0).toString());
+    byte[] offset = table.read("kafkaTest" + new TopicAndPartition("users", 0).toString());
     Assert.assertNotNull(offset);
     Assert.assertEquals(3, Bytes.toLong(offset));
 
