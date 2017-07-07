@@ -46,6 +46,8 @@ import com.google.common.base.Strings;
 import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,6 +65,7 @@ import javax.annotation.Nullable;
 @Name(KafkaBatchSource.NAME)
 @Description("Kafka batch source.")
 public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, StructuredRecord> {
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaBatchSource.class);
   public static final String NAME = "Kafka";
 
   private final KafkaBatchConfig config;
@@ -174,10 +177,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
       return partitionSet;
     }
-
-    @Nullable
+    //automatically assign default value if user does not define one in the configurations
     public String getKeyField() {
-      return Strings.isNullOrEmpty(keyField) ? null : keyField;
+      return Strings.isNullOrEmpty(keyField) ? "key" : keyField;
     }
 
     @Nullable
@@ -185,9 +187,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return Strings.isNullOrEmpty(partitionField) ? null : partitionField;
     }
 
-    @Nullable
     public String getOffsetField() {
-      return Strings.isNullOrEmpty(offsetField) ? null : offsetField;
+      return Strings.isNullOrEmpty(offsetField) ? "offset" : offsetField;
     }
 
     @Nullable
@@ -219,7 +220,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         // if the field is not the time field and not the key field, it is a message field.
        if (fieldName.equals(keyField)) {
           if (fieldType != Schema.Type.BYTES) {
-            throw new IllegalArgumentException("The key field must be of type bytes or nullable bytes.");
+            throw new IllegalArgumentException("The key field must be of type bytes.");
           }
           keyFieldExists = true;
         } else if (fieldName.equals(partitionField)) {
@@ -240,7 +241,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         throw new IllegalArgumentException(
           "Schema must contain at least one other field besides the time and key fields.");
       }
-      if (getKeyField() != null && !keyFieldExists) {
+      if (!getKeyField().equals("key") && !keyFieldExists) {
         throw new IllegalArgumentException(String.format(
           "keyField '%s' does not exist in the schema. Please add it to the schema.", keyField));
       }
@@ -248,9 +249,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         throw new IllegalArgumentException(String.format(
           "partitionField '%s' does not exist in the schema. Please add it to the schema.", partitionField));
       }
-      if (getOffsetField() != null && !offsetFieldExists) {
+      if (!getOffsetField().equals("offset") && !offsetFieldExists) {
         throw new IllegalArgumentException(String.format(
-          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetFieldExists));
+          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetField));
       }
       return Schema.recordOf("kafka.message", messageFields);
     }
@@ -414,7 +415,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void transform(KeyValue<KafkaKey, KafkaMessage> input, Emitter<StructuredRecord> emitter) throws Exception {
     StructuredRecord.Builder builder = StructuredRecord.builder(schema);
+    LOG.info("key value is: {}", config.getKeyField());
     if (config.getKeyField() != null) {
+      LOG.info("key value is: {}", config.getKeyField());
       builder.set(config.getKeyField(), input.getValue().getKey().array());
     }
     if (config.getPartitionField() != null) {

@@ -114,6 +114,18 @@
             {
               "name": "message",
               "type": ["bytes", "null"]
+            },
+            {
+              "name": "key",
+              "type": ["bytes"]
+            },
+            {
+              "name": "timestamp",
+              "type": ["long"]
+            },
+            {
+              "name": "offset",
+              "type": ["long"]
             }
           ]
         },

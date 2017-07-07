@@ -113,6 +113,10 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   @Nullable
   private String offsetField;
 
+  private String timestampField;
+
+  private String messageField;
+
   @Description("Max number of records to read per second per partition. 0 means there is no limit. Defaults to 1000.")
   @Nullable
   private Integer maxRatePerPartition;
@@ -155,14 +159,12 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     return brokers;
   }
 
-  @Nullable
   public String getTimeField() {
-    return Strings.isNullOrEmpty(timeField) ? null : timeField;
+    return Strings.isNullOrEmpty(timeField) ? "timestamp" : timeField;
   }
 
-  @Nullable
   public String getKeyField() {
-    return Strings.isNullOrEmpty(keyField) ? null : keyField;
+    return Strings.isNullOrEmpty(keyField) ? "key" : keyField;
   }
 
   @Nullable
@@ -170,9 +172,8 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     return Strings.isNullOrEmpty(partitionField) ? null : partitionField;
   }
 
-  @Nullable
   public String getOffsetField() {
-    return Strings.isNullOrEmpty(offsetField) ? null : offsetField;
+    return Strings.isNullOrEmpty(offsetField) ? "offset" : offsetField;
   }
 
   @Nullable

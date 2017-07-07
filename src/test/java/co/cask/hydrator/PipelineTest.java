@@ -113,7 +113,9 @@ public class PipelineTest extends HydratorTestBase {
       "user",
       Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
       Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
-      Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
+      Schema.Field.of("last", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("key", Schema.nullableOf(Schema.of(Schema.Type.BYTES))),
+      Schema.Field.of("offset", Schema.nullableOf(Schema.of(Schema.Type.LONG))));
 
     // create the pipeline config
     String inputName = "sourceTestInput";
@@ -181,7 +183,7 @@ public class PipelineTest extends HydratorTestBase {
     messages.put("e", "5,dwayne,johnson");
     sendKafkaMessage("users", messages);
     workflowManager.start();
-    TimeUnit.SECONDS.sleep(10);
+    TimeUnit.SECONDS.sleep(30); //changed from 10 to 30
     workflowManager.waitForRun(ProgramRunStatus.COMPLETED, 1, TimeUnit.MINUTES);
     final Map<Long, String> expected2 = ImmutableMap.of(
       1L, "samuel jackson",
