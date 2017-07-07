@@ -101,6 +101,14 @@
             {
               "name": "message",
               "type": ["bytes", "null"]
+            },
+            {
+              "name": "key",
+              "type": ["bytes", "null"]
+            },
+            {
+              "name": "offset",
+              "type": ["long", "null"]
             }
           ]
         },

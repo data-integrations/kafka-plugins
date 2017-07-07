@@ -46,21 +46,24 @@ in conjuction with the format to parse Kafka message payloads.
 For example, a value of 'csv' will attempt to parse Kafka payloads as comma-separated values.
 If no format is given, Kafka message payloads will be treated as bytes.
 
-**timeField:** Optional name of the field containing the read time of the batch.
-If this is not set, no time field will be added to output records.
-If set, this field must be present in the schema property and must be a long.
+**timeField:** Optional name of the field containing the partition offset the message was read from.
+A default name of "timestamp" is automatically added to the output schema.
+If the user wishes the change the default name, the new name must be set and must replace the default name in the
+output schema.
 
-**keyField:** Optional name of the field containing the message key.
-If this is not set, no key field will be added to output records.
-If set, this field must be present in the schema property and must be bytes.
+**keyField:** Optional name of the field containing the partition offset the message was read from.
+A default name of "key" is automatically added to the output schema.
+If the user wishes the change the default name, the new name must be set and must replace the default name in the
+output schema.
 
 **partitionField:** Optional name of the field containing the partition the message was read from.
 If this is not set, no partition field will be added to output records.
 If set, this field must be present in the schema property and must be an int.
 
 **offsetField:** Optional name of the field containing the partition offset the message was read from.
-If this is not set, no offset field will be added to output records.
-If set, this field must be present in the schema property and must be a long.
+A default name of "offset" is automatically added to the output schema.
+If the user wishes the change the default name, the new name must be set and must replace the default name in the
+output schema.
 
 **maxRatePerPartition:** Maximum number of records to read per second per partition. Defaults to 1000.
 
