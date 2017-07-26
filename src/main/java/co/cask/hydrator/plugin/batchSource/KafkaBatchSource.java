@@ -317,7 +317,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
       Schema messageSchema = getMessageSchema();
       // if format is empty, there must be just a single message field of type bytes or nullable types.
-      if (Strings.isNullOrEmpty(format)) {
+      if (Strings.isNullOrEmpty(format) || "binary".equals(format)) {
         List<Schema.Field> messageFields = messageSchema.getFields();
         if (messageFields.size() > 1) {
           List<String> fieldNames = new ArrayList<>();
@@ -407,7 +407,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         break;
       }
     }
-    if (config.getFormat() != null) {
+    if (config.getFormat() != null && !"binary".equals(config.getFormat())) {
       FormatSpecification spec =
         new FormatSpecification(config.getFormat(), messageSchema, new HashMap<String, String>());
       recordFormat = RecordFormats.createInitializedFormat(spec);
@@ -426,7 +426,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     if (config.getOffsetField() != null) {
       builder.set(config.getOffsetField(), input.getKey().getOffset());
     }
-    if (config.getFormat() == null) {
+    if (config.getFormat() == null || "binary".equals(config.getFormat())) {
       builder.set(messageField, input.getValue().getPayload().array());
     } else {
       StructuredRecord messageRecord = recordFormat.read(new StreamEvent(input.getValue().getPayload()));
