@@ -133,7 +133,10 @@ public class KafkaStreamingTest extends HydratorTestBase {
       "user",
       Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
       Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
-      Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
+      Schema.Field.of("last", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("key", Schema.nullableOf(Schema.of(Schema.Type.BYTES))),
+      Schema.Field.of("offset", Schema.nullableOf(Schema.of(Schema.Type.LONG))),
+      Schema.Field.of("timestamp", Schema.nullableOf(Schema.of(Schema.Type.LONG))));
 
     Map<String, String> properties = new HashMap<>();
     properties.put("referenceName", "kafkaPurchases");

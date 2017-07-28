@@ -16,6 +16,7 @@
 
 package co.cask.hydrator;
 
+import co.cask.cdap.api.artifact.ArtifactScope;
 import co.cask.cdap.api.artifact.ArtifactSummary;
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.data.format.StructuredRecord;
@@ -37,6 +38,7 @@ import co.cask.cdap.proto.id.ArtifactId;
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.cdap.test.ApplicationManager;
 import co.cask.cdap.test.DataSetManager;
+import co.cask.cdap.test.ServiceManager;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.cdap.test.WorkflowManager;
 import co.cask.hydrator.plugin.batchSource.KafkaBatchSource;
@@ -60,6 +62,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -113,7 +116,9 @@ public class KafkaBatchTest extends HydratorTestBase {
       "user",
       Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
       Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
-      Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
+      Schema.Field.of("last", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("key", Schema.nullableOf(Schema.of(Schema.Type.BYTES))),
+      Schema.Field.of("offset", Schema.nullableOf(Schema.of(Schema.Type.LONG))));
 
     // create the pipeline config
     String inputName = "sourceTestInput";
@@ -140,14 +145,12 @@ public class KafkaBatchTest extends HydratorTestBase {
     ApplicationId pipelineId = NamespaceId.DEFAULT.app("testKafkaSource");
     ApplicationManager appManager = deployApplication(pipelineId, new AppRequest<>(APP_ARTIFACT, pipelineConfig));
 
-
     Map<String, String> messages = new HashMap<>();
     messages.put("a", "1,samuel,jackson");
     messages.put("b", "2,dwayne,johnson");
     messages.put("c", "3,christopher,walken");
     sendKafkaMessage("users", messages);
-
-
+    
     WorkflowManager workflowManager = appManager.getWorkflowManager(SmartWorkflow.NAME);
     workflowManager.start();
     workflowManager.waitForRun(ProgramRunStatus.COMPLETED, 1, TimeUnit.MINUTES);
@@ -181,8 +184,7 @@ public class KafkaBatchTest extends HydratorTestBase {
     messages.put("e", "5,dwayne,johnson");
     sendKafkaMessage("users", messages);
     workflowManager.start();
-    TimeUnit.SECONDS.sleep(10);
-    workflowManager.waitForRun(ProgramRunStatus.COMPLETED, 1, TimeUnit.MINUTES);
+    workflowManager.waitForRuns(ProgramRunStatus.COMPLETED, 2, 1, TimeUnit.MINUTES);
     final Map<Long, String> expected2 = ImmutableMap.of(
       1L, "samuel jackson",
       2L, "dwayne johnson",

@@ -232,18 +232,12 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
       }
 
       StructuredRecord.Builder builder = StructuredRecord.builder(schema);
-      if (timeField != null) {
         builder.set(timeField, ts);
-      }
-      if (keyField != null) {
         builder.set(keyField, in.key());
-      }
       if (partitionField != null) {
         builder.set(partitionField, in.partition());
       }
-      if (offsetField != null) {
         builder.set(offsetField, in.offset());
-      }
       addMessage(builder, messageField, (byte[]) in.message());
       return builder.build();
     }

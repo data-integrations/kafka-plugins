@@ -43,16 +43,18 @@ For example, a value of 'csv' will attempt to parse Kafka payloads as comma-sepa
 If no format is given, Kafka message payloads will be treated as bytes.
 
 **keyField:** Optional name of the field containing the message key.
-If this is not set, no key field will be added to output records.
-If set, this field must be present in the schema property and must be bytes.
+A default name of "key" is automatically added to the output schema.
+If the user wishes the change the default name, the new name must be set and must replace the default name in the
+output schema.
 
 **partitionField:** Optional name of the field containing the partition the message was read from.
 If this is not set, no partition field will be added to output records.
 If set, this field must be present in the schema property and must be an int.
 
 **offsetField:** Optional name of the field containing the partition offset the message was read from.
-If this is not set, no offset field will be added to output records.
-If set, this field must be present in the schema property and must be a long.
+A default name of "offset" is automatically added to the output schema.
+If the user wishes the change the default name, the new name must be set and must replace the default name in the
+output schema.
 
 
 Example

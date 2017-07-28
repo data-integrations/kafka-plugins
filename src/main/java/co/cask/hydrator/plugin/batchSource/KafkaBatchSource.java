@@ -118,8 +118,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     private String format;
 
     @Description("Optional name of the field containing the message key. " +
-      "If this is not set, no key field will be added to output records. " +
-      "If set, this field must be present in the schema property and must be bytes.")
+      "A default name of \"key\" is automatically added to the output schema. " +
+      "If the user wishes the change the default name, the new name must be set and must replace the default " +
+      "name in the output schema.")
     @Nullable
     private String keyField;
 
@@ -129,14 +130,17 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     private String partitionField;
 
-    @Description("Optional name of the field containing the kafka offset that the message was read from. " +
-      "If this is not set, no offset field will be added to output records. " +
-      "If set, this field must be present in the schema property and must be a long.")
+    @Description("Optional name of the field containing the partition offset the message was read from. " +
+      "A default name of \"offset\" is automatically added to the output schema. " +
+      "If the user wishes the change the default name, the new name must be set and must replace the default " +
+      "name in the output schema.")
     @Nullable
     private String offsetField;
 
     public KafkaBatchConfig() {
       super("");
+      keyField = "key";
+      offsetField = "offset";
     }
 
     public KafkaBatchConfig(String brokers, String partitions, String topic, String initialPartitionOffsets,
@@ -176,10 +180,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
       return partitionSet;
     }
-
-    @Nullable
     public String getKeyField() {
-      return Strings.isNullOrEmpty(keyField) ? null : keyField;
+      return keyField;
     }
 
     @Nullable
@@ -187,9 +189,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return Strings.isNullOrEmpty(partitionField) ? null : partitionField;
     }
 
-    @Nullable
     public String getOffsetField() {
-      return Strings.isNullOrEmpty(offsetField) ? null : offsetField;
+      return offsetField;
     }
 
     @Nullable
@@ -242,7 +243,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         throw new IllegalArgumentException(
           "Schema must contain at least one other field besides the time and key fields.");
       }
-      if (getKeyField() != null && !keyFieldExists) {
+      if (!keyFieldExists) {
         throw new IllegalArgumentException(String.format(
           "keyField '%s' does not exist in the schema. Please add it to the schema.", keyField));
       }
@@ -250,9 +251,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         throw new IllegalArgumentException(String.format(
           "partitionField '%s' does not exist in the schema. Please add it to the schema.", partitionField));
       }
-      if (getOffsetField() != null && !offsetFieldExists) {
+      if (!offsetFieldExists) {
         throw new IllegalArgumentException(String.format(
-          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetFieldExists));
+          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetField));
       }
       return Schema.recordOf("kafka.message", messageFields);
     }
@@ -417,7 +418,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void transform(KeyValue<KafkaKey, KafkaMessage> input, Emitter<StructuredRecord> emitter) throws Exception {
     StructuredRecord.Builder builder = StructuredRecord.builder(schema);
-    if (config.getKeyField() != null) {
+    if (input.getValue().getKey() != null) {
       builder.set(config.getKeyField(), input.getValue().getKey().array());
     }
     if (config.getPartitionField() != null) {
@@ -426,6 +427,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     if (config.getOffsetField() != null) {
       builder.set(config.getOffsetField(), input.getKey().getOffset());
     }
+
+    builder.set(config.getOffsetField(), input.getKey().getOffset());
+
     if (config.getFormat() == null || "binary".equals(config.getFormat())) {
       builder.set(messageField, input.getValue().getPayload().array());
     } else {
