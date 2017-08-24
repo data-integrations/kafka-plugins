@@ -6,7 +6,7 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.8.0-SNAPSHOT-0.8.2.2</version>
+  <version>1.8.1-SNAPSHOT-0.8.2.2</version>
 
   <licenses>
     <license>
@@ -58,15 +58,15 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.2.0</cdap.version>
-    <hydrator.version>1.7.0</hydrator.version>
+    <cdap.version>4.3.0-SNAPSHOT</cdap.version>
+    <hydrator.version>1.8.0-SNAPSHOT</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
     <kafka.version>0.8.2.2</kafka.version>
     <hadoop.version>2.3.0</hadoop.version>
     <!-- properties for script build step that creates the config files for the artifacts -->
-    <app.parents>system:cdap-data-streams[4.2.0-SNAPSHOT,5.0.0),system:cdap-data-pipeline[4.2.0-SNAPSHOT,5.0.0)</app.parents>
+    <app.parents>system:cdap-data-streams[4.3.0-SNAPSHOT,5.0.0),system:cdap-data-pipeline[4.3.0-SNAPSHOT,5.0.0)</app.parents>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
 
@@ -328,7 +328,7 @@
           <configuration>
             <instructions>
               <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
-                kafka.serializer.*;kafka.common</_exportcontents>
+                kafka.serializer.*;kafka.common;</_exportcontents>
               <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
               <Embed-Transitive>true</Embed-Transitive>
               <Embed-Directory>lib</Embed-Directory>

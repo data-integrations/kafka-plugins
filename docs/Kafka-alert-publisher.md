@@ -1,14 +1,10 @@
-Kafka Plugins
-=============
+# kafka-alert-plugin
 
-<a href="https://cdap-users.herokuapp.com/"><img alt="Join CDAP community" src="https://cdap-users.herokuapp.com/badge.svg?t=kafka-plugins"/></a> [![Build Status](https://travis-ci.org/hydrator/kafka-plugins.svg?branch=master)](https://travis-ci.org/hydrator/kafka-plugins) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) <img alt="CDAP Realtime Source" src="https://cdap-users.herokuapp.com/assets/cdap-realtime-source.svg"/> []() <img alt="CDAP Realtime Sink" src="https://cdap-users.herokuapp.com/assets/cdap-realtime-sink.svg"/> []() <img src="https://cdap-users.herokuapp.com/assets/cm-available.svg"/>
+<a href="https://cdap-users.herokuapp.com/"><img alt="Join CDAP community" src="https://cdap-users.herokuapp.com/badge.svg?t=kafka-alert-plugin"/></a> [![Build Status](https://travis-ci.org/hydrator/kafka-alert-plugin.svg?branch=master)](https://travis-ci.org/hydrator/kafka-alert-plugin) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) []() <img src="https://cdap-users.herokuapp.com/assets/cm-available.svg"/>
 
-Kafka source and sink to read/write events to/from kafka. Sink/Source plugins are compatible with Kafka 0.8, 0.9 and 0.10. Alert publisher is only compatible with kafka 0.8.2.
-
-* [Kafka Source](docs/KAFKASOURCE.md)
-* [Kafka Batch Source](docs/KAFKABATCHSOURCE.md)
-* [Kafka Sink](docs/KAFKAWRITER-SINK.md)
-* [Kafka Alert Publisher](docs/Kafka-alert-publisher.md)
+Kafka Alert Publisher that allows you to publish alerts to kafka as json objects. The plugin internally uses kafka producer apis to publish alerts. 
+The plugin allows to specify kafka topic to use for publishing and other additional kafka producer properties. 
+Please note that this plugin uses kafka 0.8.2 java apis, so it may not be compatible with higher versions of kafka.
 
 Build
 -----
@@ -25,11 +21,11 @@ Deployment
 ----------
 You can deploy your plugins using the CDAP CLI:
 
-    > load artifact <target/kafka-plugins-<version>.jar config-file <target/kafka-plugins<version>.json>
+    > load artifact <target/kafka-alert-plugin-<version>.jar config-file <target/kafka-alert-plugin<version>.json>
 
-For example, if your artifact is named 'kafka-plugins-<version>':
+For example, if your artifact is named 'kafka-alert-plugin-<version>':
 
-    > load artifact target/kafka-plugins-<version>.jar config-file target/kafka-plugins-<version>.json
+    > load artifact target/kafka-alert-plugin-<version>.jar config-file target/kafka-alert-plugin-<version>.json
     
 ## Mailing Lists
 
