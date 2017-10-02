@@ -93,7 +93,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     for (TopicMetadata topicMetadata : topicMetadataList) {
       for (PartitionMetadata partitionMetadata : topicMetadata.partitionsMetadata()) {
         LeaderInfo leader =
-          new LeaderInfo(new URI("tcp://" + partitionMetadata.leader().connectionString()),
+          new LeaderInfo(new URI("tcp://" + partitionMetadata.leader().getConnectionString()),
                          partitionMetadata.leader().id());
         if (partitions.isEmpty() || partitions.contains(partitionMetadata.partitionId())) {
           if (offsetRequestInfo.containsKey(leader)) {

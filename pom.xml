@@ -6,7 +6,7 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.8.0-SNAPSHOT-0.8.2.2</version>
+  <version>1.8.1-SNAPSHOT</version>
 
   <licenses>
     <license>
@@ -54,16 +54,23 @@
       <id>sonatype-snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </repository>
+    <repository>
+      <id>mapr-maven</id>
+      <url>http://repository.mapr.com/maven</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
   </repositories>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.3.0-SNAPSHOT</cdap.version>
-    <hydrator.version>1.8.0-SNAPSHOT</hydrator.version>
+    <cdap.version>4.3.0</cdap.version>
+    <hydrator.version>1.8.0</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
-    <kafka.version>0.8.2.2</kafka.version>
+    <mapr.streams.version>5.2.0-mapr</mapr.streams.version>
+    <mapr.kafka.version>0.9.0.0-mapr-1607</mapr.kafka.version>
     <hadoop.version>2.3.0</hadoop.version>
     <!-- properties for script build step that creates the config files for the artifacts -->
     <app.parents>system:cdap-data-streams[4.3.0-SNAPSHOT,5.0.0),system:cdap-data-pipeline[4.3.0-SNAPSHOT,5.0.0)</app.parents>
@@ -115,9 +122,20 @@
       <version>${hydrator.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.mapr.streams</groupId>
+      <artifactId>mapr-streams</artifactId>
+      <version>${mapr.streams.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.10</artifactId>
-      <version>${kafka.version}</version>
+      <artifactId>kafka-clients</artifactId>
+      <version>${mapr.kafka.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -243,24 +261,24 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming-kafka_2.10</artifactId>
+      <artifactId>spark-streaming-kafka_2.11</artifactId>
       <version>${spark.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-mllib_2.10</artifactId>
-      <version>${spark.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming_2.10</artifactId>
+      <artifactId>spark-mllib_2.11</artifactId>
       <version>${spark.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.10</artifactId>
+      <artifactId>spark-streaming_2.11</artifactId>
+      <version>${spark.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.11</artifactId>
       <version>${spark.version}</version>
       <scope>provided</scope>
       <exclusions>
@@ -328,7 +346,8 @@
           <configuration>
             <instructions>
               <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
-                kafka.serializer.*;kafka.common;</_exportcontents>
+                kafka.serializer.*;kafka.common;org.apache.kafka.*;com.mapr.streams.*;
+                org.apache.xalan.*</_exportcontents>
               <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
               <Embed-Transitive>true</Embed-Transitive>
               <Embed-Directory>lib</Embed-Directory>
