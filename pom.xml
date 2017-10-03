@@ -96,12 +96,18 @@
       <version>${cdap.version}</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-        <groupId>co.cask.cdap</groupId>
-        <artifactId>cdap-common</artifactId>
-        <version>${cdap.version}</version>
-      <scope>provided</scope>
-    </dependency>
+    <!--<dependency>-->
+        <!--<groupId>co.cask.cdap</groupId>-->
+        <!--<artifactId>cdap-common</artifactId>-->
+        <!--<version>${cdap.version}</version>-->
+      <!--<exclusions>-->
+        <!--<exclusion>-->
+          <!--<groupId>org.apache.kafka</groupId>-->
+          <!--<artifactId>kafka_2.10</artifactId>-->
+        <!--</exclusion>-->
+      <!--</exclusions>-->
+      <!--<scope>provided</scope>-->
+    <!--</dependency>-->
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-formats</artifactId>

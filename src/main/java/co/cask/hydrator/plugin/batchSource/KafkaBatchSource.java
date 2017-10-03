@@ -16,15 +16,6 @@
 
 package co.cask.hydrator.plugin.batchSource;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
 import co.cask.cdap.api.annotation.Name;
@@ -39,7 +30,6 @@ import co.cask.cdap.api.dataset.DatasetProperties;
 import co.cask.cdap.api.dataset.lib.KeyValue;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
 import co.cask.cdap.api.flow.flowlet.StreamEvent;
-import co.cask.cdap.common.io.ByteBuffers;
 import co.cask.cdap.etl.api.Emitter;
 import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.batch.BatchRuntimeContext;
@@ -56,6 +46,16 @@ import com.google.common.base.Strings;
 import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.Nullable;
 
 /**
  * Kafka batch source.
@@ -425,7 +425,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       builder.set(config.getOffsetField(), input.getKey().getOffset());
     }
     if (config.getFormat() == null) {
-      builder.set(messageField, ByteBuffers.getByteArray(input.getValue().getPayload()));
+      builder.set(messageField, getByteArray(input.getValue().getPayload()));
     } else {
       StructuredRecord messageRecord = recordFormat.read(new StreamEvent(input.getValue().getPayload()));
       for (Schema.Field field : messageRecord.getSchema().getFields()) {
@@ -434,5 +434,12 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
     emitter.emit(builder.build());
+  }
+
+  private static byte[] getByteArray(ByteBuffer buffer) {
+    if (buffer.hasArray() && buffer.array().length == buffer.remaining()) {
+      return buffer.array();
+    }
+    return Bytes.toBytes(buffer);
   }
 }
