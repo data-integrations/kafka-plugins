@@ -1,5 +1,6 @@
 package co.cask.hydrator.plugin.sink;
 
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -68,6 +69,7 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
   @Override
   public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context)
     throws IOException, InterruptedException {
+    KafkaSecurity.SetupKafkaSecurity();
     Configuration configuration = context.getConfiguration();
 
     // Extract the topics

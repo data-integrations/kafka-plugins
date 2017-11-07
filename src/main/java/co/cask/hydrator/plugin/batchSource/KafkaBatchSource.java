@@ -17,6 +17,7 @@
 package co.cask.hydrator.plugin.batchSource;
 
 import javax.annotation.Nullable;
+import javax.security.auth.login.AppConfigurationEntry;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,12 +51,16 @@ import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Kafka batch source.
@@ -64,6 +69,7 @@ import org.apache.hadoop.mapreduce.Job;
 @Name(KafkaBatchSource.NAME)
 @Description("Kafka batch source.")
 public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, StructuredRecord> {
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaBatchSource.class);
   public static final String NAME = "Kafka";
 
   private final KafkaBatchConfig config;
@@ -367,6 +373,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
   @Override
   public void prepareRun(BatchSourceContext context) throws Exception {
+    KafkaSecurity.SetupKafkaSecurity();
     Job job = JobUtils.createInstance();
     Configuration conf = job.getConfiguration();
     String tableName = config.getTableName() != null ? config.getTableName() : config.getTopic();
@@ -395,6 +402,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void initialize(BatchRuntimeContext context) throws Exception {
     super.initialize(context);
+    KafkaSecurity.SetupKafkaSecurity();
     schema = config.getSchema();
     Schema messageSchema = config.getMessageSchema();
     for (Schema.Field field : schema.getFields()) {

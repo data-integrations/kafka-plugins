@@ -11,23 +11,29 @@ import co.cask.cdap.api.data.schema.Schema;
 import co.cask.cdap.api.dataset.lib.KeyValue;
 import co.cask.cdap.etl.api.Emitter;
 import co.cask.cdap.etl.api.PipelineConfigurer;
+import co.cask.cdap.etl.api.batch.BatchRuntimeContext;
 import co.cask.cdap.etl.api.batch.BatchSink;
 import co.cask.cdap.etl.api.batch.BatchSinkContext;
 import co.cask.cdap.format.StructuredRecordStringConverter;
 import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.apache.avro.reflect.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
 
 /**
  * Kafka sink to write to Kafka
@@ -66,7 +72,15 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
 
   @Override
   public void prepareRun(BatchSinkContext context) throws Exception {
+    KafkaSecurity.SetupKafkaSecurity();
     context.addOutput(Output.of(producerConfig.referenceName, kafkaOutputFormatProvider));
+  }
+
+  @Override
+  public void initialize(BatchRuntimeContext context) throws Exception {
+    // no-op
+    super.initialize(context);
+    KafkaSecurity.SetupKafkaSecurity();
   }
 
   @Override

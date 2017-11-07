@@ -28,6 +28,7 @@ import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.streaming.StreamingContext;
 import co.cask.cdap.etl.api.streaming.StreamingSource;
 import co.cask.cdap.format.RecordFormats;
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.collect.Sets;
 import kafka.api.OffsetRequest;
 import kafka.api.PartitionOffsetRequestInfo;
@@ -40,6 +41,7 @@ import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndMetadata;
 import kafka.serializer.DefaultDecoder;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
@@ -57,6 +59,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
 
 /**
  * Kafka Streaming source
@@ -87,6 +91,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
 
   @Override
   public JavaDStream<StructuredRecord> getStream(StreamingContext context) throws Exception {
+    KafkaSecurity.SetupKafkaSecurity();
     context.registerLineage(conf.referenceName);
 
     Map<String, String> kafkaParams = new HashMap<>();
