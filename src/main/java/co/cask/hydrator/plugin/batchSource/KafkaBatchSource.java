@@ -135,6 +135,21 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     private String offsetField;
 
+    @Description("Additional kafka producer properties to set")
+    @Macro
+    @Nullable
+    private String kafkaProperties;
+
+    @Description("The kerberos principal used for the source.")
+    @Macro
+    @Nullable
+    private String principal;
+
+    @Description("The keytab location for the kerberos principal when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String keytabLocation;
+
     public KafkaBatchConfig() {
       super("");
     }
@@ -159,6 +174,17 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     public String getTableName() {
       return tableName;
+    }
+
+    @Nullable
+    public String getPrincipal() {
+      return principal;
+    }
+
+    @Nullable
+    public String getKeytabLocation() {
+
+      return keytabLocation;
     }
 
     public Set<Integer> getPartitions() {
@@ -307,6 +333,17 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return partitionOffsets;
     }
 
+    public Map<String, String> getKafkaProperties() {
+      KeyValueListParser kvParser = new KeyValueListParser("\\s*,\\s*", ":");
+      Map<String, String> conf = new HashMap<>();
+      if (!Strings.isNullOrEmpty(kafkaProperties)) {
+        for (KeyValue<String, String> keyVal : kvParser.parse(kafkaProperties)) {
+          conf.put(keyVal.getKey(), keyVal.getValue());
+        }
+      }
+      return conf;
+    }
+
     public void validate() {
       // brokers can be null since it is macro enabled.
       if (kafkaBrokers != null) {
@@ -377,14 +414,16 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     table = context.getDataset(tableName);
     Map<String, String> kafkaConf = new HashMap<>();
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
-    kafkaConf.put("security.protocol", "SASL_PLAINTEXT");
-    kafkaConf.put("sasl.mechanism", "GSSAPI");
-    kafkaConf.put("sasl.kerberos.service.name", "kafka");
-    kafkaConf.put("sasl.jaas.config", "com.sun.security.auth.module.Krb5LoginModule required \n" +
-      "        useKeyTab=true \n" +
-      "        storeKey=true  \n" +
-      "        keyTab=\"/etc/security/keytabs/cdap.service.keytab\" \n" +
-      "        principal=\"cdap/hdp-2529066-1000.dev.continuuity.net@CONTINUUITY.NET\";");
+    kafkaConf.putAll(config.getKafkaProperties());
+    if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
+      kafkaConf.put("sasl.jaas.config", String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
+                                                        "        useKeyTab=true \n" +
+                                                        "        storeKey=true  \n" +
+                                                        "        useTicketCache=false  \n" +
+                                                        "        keyTab=\"%s\" \n" +
+                                                        "        principal=\"%s\";", config.getKeytabLocation(),
+                                                      config.getPrincipal()));
+    }
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        table);
