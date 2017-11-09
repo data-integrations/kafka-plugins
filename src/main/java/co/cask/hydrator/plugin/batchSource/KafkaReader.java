@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class KafkaReader {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaReader.class);
+  private static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
   // index of context
   private final KafkaRequest kafkaRequest;
@@ -79,17 +80,17 @@ public class KafkaReader {
    */
   public KafkaMessage getNext(KafkaKey kafkaKey) throws IOException {
     if (hasNext()) {
-
       ConsumerRecord<byte[], byte[]> consumerRecord = messageIter.next();
 
+      byte[] keyBytes = consumerRecord.key();
       byte[] value = consumerRecord.value();
       if (value == null) {
         LOG.warn("Received message with null message.payload with topic {} and partition {}",
                  kafkaKey.getTopic(), kafkaKey.getPartition());
       }
 
-      ByteBuffer payload = value == null ? ByteBuffer.wrap(new byte[0]) : ByteBuffer.wrap(value);
-      ByteBuffer key = ByteBuffer.wrap(consumerRecord.key());
+      ByteBuffer payload = value == null ? ByteBuffer.wrap(EMPTY_BYTE_ARRAY) : ByteBuffer.wrap(value);
+      ByteBuffer key = keyBytes == null ? ByteBuffer.wrap(EMPTY_BYTE_ARRAY) :  ByteBuffer.wrap(keyBytes);
 
       kafkaKey.clear();
       kafkaKey.set(kafkaRequest.getTopic(), kafkaRequest.getPartition(), currentOffset,
