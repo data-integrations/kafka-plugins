@@ -377,6 +377,14 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     table = context.getDataset(tableName);
     Map<String, String> kafkaConf = new HashMap<>();
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
+    kafkaConf.put("security.protocol", "SASL_PLAINTEXT");
+    kafkaConf.put("sasl.mechanism", "GSSAPI");
+    kafkaConf.put("sasl.kerberos.service.name", "kafka");
+    kafkaConf.put("sasl.jaas.config", "com.sun.security.auth.module.Krb5LoginModule required \n" +
+      "        useKeyTab=true \n" +
+      "        storeKey=true  \n" +
+      "        keyTab=\"/etc/security/keytabs/cdap.service.keytab\" \n" +
+      "        principal=\"cdap/hdp-2529066-1000.dev.continuuity.net@CONTINUUITY.NET\";");
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        table);
