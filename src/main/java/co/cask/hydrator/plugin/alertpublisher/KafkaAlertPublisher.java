@@ -13,11 +13,11 @@ import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.hydrator.common.KeyValueListParser;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
-import kafka.common.InvalidTopicException;
 import kafka.common.Topic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.InvalidTopicException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

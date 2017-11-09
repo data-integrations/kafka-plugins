@@ -58,8 +58,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.3.0-SNAPSHOT</cdap.version>
-    <hydrator.version>1.8.0-SNAPSHOT</hydrator.version>
+    <cdap.version>4.3.1</cdap.version>
+    <hydrator.version>1.8.1</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
@@ -305,6 +305,12 @@
           <artifactId>jets3t</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.jopt-simple</groupId>
+      <artifactId>jopt-simple</artifactId>
+      <version>3.2</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
