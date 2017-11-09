@@ -19,7 +19,6 @@ import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.apache.avro.reflect.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
@@ -28,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Kafka sink to write to Kafka
@@ -144,6 +144,16 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
     @Nullable
     private String kafkaProperties;
 
+    @Description("The kerberos principal used for the source.")
+    @Macro
+    @Nullable
+    private String principal;
+
+    @Description("The keytab location for the kerberos principal when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String keytabLocation;
+
     @Name("compressionType")
     @Description("Additional kafka producer properties to set")
     @Macro
@@ -171,10 +181,19 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
 
       conf.put(BROKER_LIST, kafkaSinkConfig.brokers);
       conf.put("compression.type", kafkaSinkConfig.compressionType);
-      conf.put(KEY_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
-      conf.put(VAL_SERIALIZER, "org.apache.kafka.common.serialization.StringSerializer");
+
 
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
+      if (kafkaSinkConfig.principal != null && kafkaSinkConfig.keytabLocation != null) {
+        conf.put("additional." + "sasl.jaas.config",
+                 String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
+                                 "        useKeyTab=true \n" +
+                                 "        storeKey=true  \n" +
+                                 "        useTicketCache=false  \n" +
+                                 "        keyTab=\"%s\" \n" +
+                                 "        principal=\"%s\";", kafkaSinkConfig.keytabLocation,
+                               kafkaSinkConfig.principal));
+      }
 
       conf.put("async", kafkaSinkConfig.async);
       if (kafkaSinkConfig.async.equalsIgnoreCase("true")) {

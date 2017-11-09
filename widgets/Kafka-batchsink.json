@@ -51,6 +51,16 @@
           }
         },
         {
+          "widget-type": "textbox",
+          "label": "Kerberos Principal",
+          "name": "principal"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Keytab Location",
+          "name": "keytabLocation"
+        },
+        {
           "widget-type": "keyvalue",
           "label": "Additional Kafka Producer Properties",
           "name": "kafkaProperties",

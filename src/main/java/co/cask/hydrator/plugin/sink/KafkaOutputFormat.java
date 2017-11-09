@@ -10,6 +10,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,8 +77,6 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
     Properties props = new Properties();
     // Configure the properties for kafka.
     props.put(BROKER_LIST, configuration.get(BROKER_LIST));
-    props.put(KEY_SERIALIZER, configuration.get(KEY_SERIALIZER));
-    props.put(VAL_SERIALIZER, configuration.get(VAL_SERIALIZER));
     props.put("compression.type", configuration.get("compression.type"));
 
     if (!Strings.isNullOrEmpty(configuration.get("hasKey"))) {
@@ -102,7 +101,8 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
 
     // CDAP-9178: cached the producer object to avoid being created on every batch interval
     if (producer == null) {
-      producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
+      producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props, new StringSerializer(),
+                                                                       new StringSerializer());
     }
 
     return new KafkaRecordWriter(producer, topic);
