@@ -1,5 +1,6 @@
 package co.cask.hydrator.plugin.sink;
 
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -97,6 +98,12 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
       //strip off the prefix we added while creating the conf.
       props.put(entry.getKey().substring(11), entry.getValue());
       LOG.info("Property key: {}, value: {}", entry.getKey().substring(11), entry.getValue());
+    }
+
+    if (configuration.get(KafkaSecurity.PRINCIPAL) != null &&
+      configuration.get(KafkaSecurity.KEYTAB_LOCATION) != null) {
+      KafkaSecurity.setupKafkaSecurity(configuration.get(KafkaSecurity.PRINCIPAL),
+                                       configuration.get(KafkaSecurity.KEYTAB_LOCATION));
     }
 
     // CDAP-9178: cached the producer object to avoid being created on every batch interval

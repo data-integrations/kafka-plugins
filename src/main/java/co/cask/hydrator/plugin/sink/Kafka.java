@@ -17,6 +17,7 @@ import co.cask.cdap.format.StructuredRecordStringConverter;
 import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -184,15 +185,10 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
 
 
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
+
       if (kafkaSinkConfig.principal != null && kafkaSinkConfig.keytabLocation != null) {
-        conf.put("additional." + "sasl.jaas.config",
-                 String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
-                                 "        useKeyTab=true \n" +
-                                 "        storeKey=true  \n" +
-                                 "        useTicketCache=false  \n" +
-                                 "        keyTab=\"%s\" \n" +
-                                 "        principal=\"%s\";", kafkaSinkConfig.keytabLocation,
-                               kafkaSinkConfig.principal));
+        conf.put(KafkaSecurity.KEYTAB_LOCATION, kafkaSinkConfig.keytabLocation);
+        conf.put(KafkaSecurity.PRINCIPAL, kafkaSinkConfig.principal);
       }
 
       conf.put("async", kafkaSinkConfig.async);

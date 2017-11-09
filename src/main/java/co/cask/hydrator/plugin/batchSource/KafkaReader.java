@@ -16,6 +16,7 @@
 
 package co.cask.hydrator.plugin.batchSource;
 
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.collect.Lists;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -60,6 +62,11 @@ public class KafkaReader {
     // read data from queue
     Properties properties = new Properties();
     properties.putAll(request.getConf());
+    Map<String, String> kafkaConf = request.getConf();
+    if (kafkaConf.containsKey(KafkaSecurity.PRINCIPAL) && kafkaConf.containsKey(KafkaSecurity.KEYTAB_LOCATION)) {
+      KafkaSecurity.setupKafkaSecurity(kafkaConf.get(KafkaSecurity.PRINCIPAL),
+                                       kafkaConf.get(KafkaSecurity.KEYTAB_LOCATION));
+    }
     consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     fetch();
   }

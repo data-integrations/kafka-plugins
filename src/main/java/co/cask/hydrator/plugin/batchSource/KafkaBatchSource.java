@@ -41,6 +41,7 @@ import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -416,13 +417,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
     kafkaConf.putAll(config.getKafkaProperties());
     if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
-      kafkaConf.put("sasl.jaas.config", String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
-                                                        "        useKeyTab=true \n" +
-                                                        "        storeKey=true  \n" +
-                                                        "        useTicketCache=false  \n" +
-                                                        "        keyTab=\"%s\" \n" +
-                                                        "        principal=\"%s\";", config.getKeytabLocation(),
-                                                      config.getPrincipal()));
+      kafkaConf.put(KafkaSecurity.KEYTAB_LOCATION, config.getKeytabLocation());
+      kafkaConf.put(KafkaSecurity.PRINCIPAL, config.getPrincipal());
     }
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),

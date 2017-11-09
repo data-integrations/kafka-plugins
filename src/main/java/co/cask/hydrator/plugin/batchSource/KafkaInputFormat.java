@@ -18,6 +18,7 @@ package co.cask.hydrator.plugin.batchSource;
 
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
+import co.cask.hydrator.plugin.utils.KafkaSecurity;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -88,6 +89,10 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                               KeyValueTable table) throws Exception {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
+    if (kafkaConf.containsKey(KafkaSecurity.PRINCIPAL) && kafkaConf.containsKey(KafkaSecurity.KEYTAB_LOCATION)) {
+      KafkaSecurity.setupKafkaSecurity(kafkaConf.get(KafkaSecurity.PRINCIPAL),
+                                       kafkaConf.get(KafkaSecurity.KEYTAB_LOCATION));
+    }
     try (Consumer consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
       // Get Metadata for all topics
       @SuppressWarnings("unchecked") List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic);
