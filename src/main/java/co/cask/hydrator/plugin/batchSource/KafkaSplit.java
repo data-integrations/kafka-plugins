@@ -17,16 +17,16 @@
 package co.cask.hydrator.plugin.batchSource;
 
 
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
@@ -46,34 +46,28 @@ public class KafkaSplit extends InputSplit implements Writable {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-      String topic = in.readUTF();
-      String leaderId = in.readUTF();
-      String str = in.readUTF();
-      URI uri = null;
-      if (!str.isEmpty())
-        try {
-          uri = new URI(str);
-        } catch (URISyntaxException e) {
-          throw new RuntimeException(e);
-        }
-      int partition = in.readInt();
-      long offset = in.readLong();
-      long latestOffset = in.readLong();
-      request = new KafkaRequest(topic, leaderId, partition, uri, offset, latestOffset);
-      length = request.estimateDataSize();
+    MapWritable mapWritable = new MapWritable();
+    mapWritable.readFields(in);
+    String topic = in.readUTF();
+    int partition = in.readInt();
+    long offset = in.readLong();
+    long latestOffset = in.readLong();
+    long earliestOffset = in.readLong();
+    Map<String, String> conf = writableToConf(mapWritable);
+    request = new KafkaRequest(conf, topic, partition, offset, latestOffset);
+    request.setEarliestOffset(earliestOffset);
+    length = request.estimateDataSize();
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-      out.writeUTF(request.getTopic());
-      out.writeUTF(request.getLeaderId());
-      if (request.getURI() != null)
-        out.writeUTF(request.getURI().toString());
-      else
-        out.writeUTF("");
+    MapWritable conf = confToWritable(request.getConf());
+    conf.write(out);
+    out.writeUTF(request.getTopic());
       out.writeInt(request.getPartition());
       out.writeLong(request.getOffset());
       out.writeLong(request.getLastOffset());
+      out.writeLong(request.getEarliestOffset());
   }
 
   @Override
@@ -91,5 +85,21 @@ public class KafkaSplit extends InputSplit implements Writable {
     KafkaRequest result = request;
     request = null;
     return result;
+  }
+
+  private MapWritable confToWritable(Map<String, String> conf) {
+    MapWritable mapWritable = new MapWritable();
+    for (Map.Entry<String, String> entry : conf.entrySet()) {
+      mapWritable.put(new Text(entry.getKey()), new Text(entry.getValue()));
+    }
+    return mapWritable;
+  }
+
+  private Map<String, String> writableToConf(MapWritable mapWritable) {
+    Map<String, String> conf = new HashMap<>();
+    for (Map.Entry<Writable, Writable> entry : mapWritable.entrySet()) {
+      conf.put(entry.getKey().toString(), entry.getValue().toString());
+    }
+    return conf;
   }
 }

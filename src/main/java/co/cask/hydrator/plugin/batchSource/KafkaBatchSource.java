@@ -16,15 +16,6 @@
 
 package co.cask.hydrator.plugin.batchSource;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
 import co.cask.cdap.api.annotation.Name;
@@ -56,6 +47,16 @@ import com.google.common.base.Strings;
 import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.Nullable;
 
 /**
  * Kafka batch source.
@@ -374,7 +375,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       context.createDataset(tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
     }
     table = context.getDataset(tableName);
-    kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), config.getBrokerMap(),
+    Map<String, String> kafkaConf = new HashMap<>();
+    kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
+    kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        table);
     context.setInput(Input.of(config.referenceName,

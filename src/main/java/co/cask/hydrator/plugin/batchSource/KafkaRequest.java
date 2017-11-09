@@ -16,46 +16,37 @@
 
 package co.cask.hydrator.plugin.batchSource;
 
-import kafka.api.PartitionOffsetRequestInfo;
-import kafka.common.TopicAndPartition;
-import kafka.javaapi.OffsetRequest;
-import kafka.javaapi.OffsetResponse;
-import kafka.javaapi.consumer.SimpleConsumer;
+import com.google.common.collect.ImmutableMap;
 
-import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 
 
 /**
  * A class that represents the kafka pull request.
- *
+ * <p>
  * The class is a container for topic, leaderId, partition, uri and offset. It is
  * used in reading and writing the sequence files used for the extraction job.
- *
  */
 public class KafkaRequest {
 
   public static final long DEFAULT_OFFSET = 0;
 
+  private Map<String, String> conf;
   private String topic = "";
-  private String leaderId = "";
   private int partition = 0;
 
-  private URI uri = null;
   private long offset = DEFAULT_OFFSET;
   private long latestOffset = -1;
   private long earliestOffset = -2;
   private long avgMsgSize = 1024;
 
-  public KafkaRequest(String topic, String leaderId, int partition, URI brokerUri) {
-    this(topic, leaderId, partition, brokerUri, DEFAULT_OFFSET, -1);
+  public KafkaRequest(Map<String, String> conf, String topic, int partition) {
+    this(conf, topic, partition, DEFAULT_OFFSET, -1);
   }
 
-  public KafkaRequest(String topic, String leaderId, int partition, URI brokerUri, long offset, long latestOffset) {
+  public KafkaRequest(Map<String, String> conf, String topic, int partition, long offset, long latestOffset) {
+    this.conf = ImmutableMap.copyOf(conf);
     this.topic = topic;
-    this.leaderId = leaderId;
-    this.uri = brokerUri;
     this.partition = partition;
     this.latestOffset = latestOffset;
     setOffset(offset);
@@ -77,16 +68,12 @@ public class KafkaRequest {
     this.offset = offset;
   }
 
-  public String getLeaderId() {
-    return this.leaderId;
+  public Map<String, String> getConf() {
+    return conf;
   }
 
   public String getTopic() {
     return this.topic;
-  }
-
-  public URI getURI() {
-    return this.uri;
   }
 
   public int getPartition() {
@@ -98,48 +85,11 @@ public class KafkaRequest {
   }
 
   public long getEarliestOffset() {
-    if (this.earliestOffset == -2 && uri != null) {
-      SimpleConsumer consumer = new SimpleConsumer(uri.getHost(), uri.getPort(), 20000, 1024 * 1024, "client");
-      Map<TopicAndPartition, PartitionOffsetRequestInfo> offsetInfo = new HashMap<>();
-      offsetInfo.put(new TopicAndPartition(topic, partition),
-                     new PartitionOffsetRequestInfo(kafka.api.OffsetRequest.EarliestTime(), 1));
-      OffsetResponse response =
-        consumer.getOffsetsBefore(new OffsetRequest(offsetInfo, kafka.api.OffsetRequest.CurrentVersion(), "client"));
-      long[] endOffset = response.offsets(topic, partition);
-      if (endOffset.length == 0) {
-        throw new RuntimeException("Could not find earliest offset for topic: " + topic +
-                                     " and partition: " + partition);
-      }
-      consumer.close();
-      this.earliestOffset = endOffset[0];
-      return endOffset[0];
-    } else {
-      return this.earliestOffset;
-    }
+    return this.earliestOffset;
   }
 
   public long getLastOffset() {
-    if (this.latestOffset == -1 && uri != null)
-      return getLastOffset(kafka.api.OffsetRequest.LatestTime());
-    else {
-      return this.latestOffset;
-    }
-  }
-
-  private long getLastOffset(long time) {
-    SimpleConsumer consumer = new SimpleConsumer(uri.getHost(), uri.getPort(), 60000, 1024 * 1024, "client");
-    Map<TopicAndPartition, PartitionOffsetRequestInfo> offsetInfo = new HashMap<>();
-    offsetInfo.put(new TopicAndPartition(topic, partition), new PartitionOffsetRequestInfo(time, 1));
-    OffsetResponse response =
-      consumer.getOffsetsBefore(new OffsetRequest(offsetInfo, kafka.api.OffsetRequest.CurrentVersion(), "client"));
-    long[] endOffset = response.offsets(topic, partition);
-    consumer.close();
-    if (endOffset.length == 0) {
-      throw new RuntimeException("Could not find latest offset for topic: " + topic +
-                                   " and partition: " + partition);
-    }
-    this.latestOffset = endOffset[0];
-    return endOffset[0];
+    return this.latestOffset;
   }
 
   public long estimateDataSize() {

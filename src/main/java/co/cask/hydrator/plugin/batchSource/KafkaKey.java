@@ -19,7 +19,6 @@ package co.cask.hydrator.plugin.batchSource;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -34,7 +33,6 @@ import java.io.IOException;
  */
 public class KafkaKey implements WritableComparable<KafkaKey> {
 
-  private String leaderId = "";
   private int partition = 0;
   private long beginOffset = 0;
   private long offset = 0;
@@ -46,19 +44,18 @@ public class KafkaKey implements WritableComparable<KafkaKey> {
    * dummy empty constructor
    */
   public KafkaKey() {
-    this("dummy", "0", 0, 0, 0, 0);
+    this("dummy", 0, 0, 0, 0);
   }
 
-  public KafkaKey(String topic, String leaderId, int partition, long beginOffset, long offset) {
-    this(topic, leaderId, partition, beginOffset, offset, 0);
+  public KafkaKey(String topic, int partition, long beginOffset, long offset) {
+    this(topic, partition, beginOffset, offset, 0);
   }
 
-  public KafkaKey(String topic, String leaderId, int partition, long beginOffset, long offset, long checksum) {
-    this.set(topic, leaderId, partition, beginOffset, offset, checksum);
+  public KafkaKey(String topic, int partition, long beginOffset, long offset, long checksum) {
+    this.set(topic, partition, beginOffset, offset, checksum);
   }
 
-  public void set(String topic, String leaderId, int partition, long beginOffset, long offset, long checksum) {
-    this.leaderId = leaderId;
+  public void set(String topic, int partition, long beginOffset, long offset, long checksum) {
     this.partition = partition;
     this.beginOffset = beginOffset;
     this.offset = offset;
@@ -67,7 +64,6 @@ public class KafkaKey implements WritableComparable<KafkaKey> {
   }
 
   public void clear() {
-    leaderId = "";
     partition = 0;
     beginOffset = 0;
     offset = 0;
@@ -108,7 +104,6 @@ public class KafkaKey implements WritableComparable<KafkaKey> {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    this.leaderId = in.readUTF();
     this.partition = in.readInt();
     this.beginOffset = in.readLong();
     this.offset = in.readLong();
@@ -120,7 +115,6 @@ public class KafkaKey implements WritableComparable<KafkaKey> {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, this.leaderId);
     out.writeInt(this.partition);
     out.writeLong(this.beginOffset);
     out.writeLong(this.offset);

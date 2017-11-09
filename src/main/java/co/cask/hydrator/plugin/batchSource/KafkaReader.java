@@ -16,23 +16,21 @@
 
 package co.cask.hydrator.plugin.batchSource;
 
-import kafka.api.PartitionFetchInfo;
-import kafka.common.TopicAndPartition;
-import kafka.javaapi.FetchRequest;
-import kafka.javaapi.FetchResponse;
-import kafka.javaapi.consumer.SimpleConsumer;
-import kafka.javaapi.message.ByteBufferMessageSet;
-import kafka.message.Message;
-import kafka.message.MessageAndOffset;
+import com.google.common.collect.Lists;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -42,13 +40,12 @@ public class KafkaReader {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaReader.class);
 
   // index of context
-  private static final int fetchBufferSize = 1024 * 1024;
   private final KafkaRequest kafkaRequest;
-  private final SimpleConsumer simpleConsumer;
+  private final Consumer<byte[], byte[]> consumer;
 
   private long currentOffset;
   private long lastOffset;
-  private Iterator<MessageAndOffset> messageIter;
+  private Iterator<ConsumerRecord<byte[], byte[]>> messageIter;
 
 
   /**
@@ -60,8 +57,9 @@ public class KafkaReader {
     lastOffset = request.getLastOffset();
 
     // read data from queue
-    URI uri = kafkaRequest.getURI();
-    simpleConsumer = new SimpleConsumer(uri.getHost(), uri.getPort(), 20 * 1000, fetchBufferSize, "client");
+    Properties properties = new Properties();
+    properties.putAll(request.getConf());
+    consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     fetch();
   }
 
@@ -82,23 +80,22 @@ public class KafkaReader {
   public KafkaMessage getNext(KafkaKey kafkaKey) throws IOException {
     if (hasNext()) {
 
-      MessageAndOffset msgAndOffset = messageIter.next();
-      Message message = msgAndOffset.message();
+      ConsumerRecord<byte[], byte[]> consumerRecord = messageIter.next();
 
-      ByteBuffer payload = message.payload();
-      ByteBuffer key = message.key();
-
-      if (payload == null) {
+      byte[] value = consumerRecord.value();
+      if (value == null) {
         LOG.warn("Received message with null message.payload with topic {} and partition {}",
                  kafkaKey.getTopic(), kafkaKey.getPartition());
-
       }
 
+      ByteBuffer payload = value == null ? ByteBuffer.wrap(new byte[0]) : ByteBuffer.wrap(value);
+      ByteBuffer key = ByteBuffer.wrap(consumerRecord.key());
+
       kafkaKey.clear();
-      kafkaKey.set(kafkaRequest.getTopic(), kafkaRequest.getLeaderId(), kafkaRequest.getPartition(), currentOffset,
-                 msgAndOffset.offset() + 1, message.checksum());
-      kafkaKey.setMessageSize(msgAndOffset.message().size());
-      currentOffset = msgAndOffset.offset() + 1; // increase offset
+      kafkaKey.set(kafkaRequest.getTopic(), kafkaRequest.getPartition(), currentOffset,
+                 consumerRecord.offset() + 1, consumerRecord.checksum());
+      kafkaKey.setMessageSize(consumerRecord.serializedValueSize());
+      currentOffset = consumerRecord.offset() + 1; // increase offset
       return new KafkaMessage(payload, key);
     } else {
       return null;
@@ -112,31 +109,12 @@ public class KafkaReader {
     if (currentOffset >= lastOffset) {
       return false;
     }
-    TopicAndPartition topicAndPartition = new TopicAndPartition(kafkaRequest.getTopic(), kafkaRequest.getPartition());
-    PartitionFetchInfo partitionFetchInfo = new PartitionFetchInfo(currentOffset, fetchBufferSize);
 
-    Map<TopicAndPartition, PartitionFetchInfo> fetchInfo = new HashMap<>();
-    fetchInfo.put(topicAndPartition, partitionFetchInfo);
-
-    FetchRequest fetchRequest = new FetchRequest(-1, "client", 1000, 1024, fetchInfo);
-
-    FetchResponse fetchResponse;
-    try {
-      fetchResponse = simpleConsumer.fetch(fetchRequest);
-      if (fetchResponse.hasError()) {
-        String message =
-          "Error Code generated : " + fetchResponse.errorCode(kafkaRequest.getTopic(), kafkaRequest.getPartition());
-        throw new RuntimeException(message);
-      }
-      return processFetchResponse(fetchResponse);
-    } catch (Exception e) {
-      return false;
-    }
-  }
-
-  private boolean processFetchResponse(FetchResponse fetchResponse) {
-    ByteBufferMessageSet messageBuffer = fetchResponse.messageSet(kafkaRequest.getTopic(), kafkaRequest.getPartition());
-    messageIter = messageBuffer.iterator();
+    TopicPartition topicPartition = new TopicPartition(kafkaRequest.getTopic(), kafkaRequest.getPartition());
+    this.consumer.assign(Lists.newArrayList(topicPartition));
+    this.consumer.seek(topicPartition, currentOffset);
+    ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(TimeUnit.SECONDS.toMillis(30));
+    messageIter = consumerRecords.iterator();
     if (!messageIter.hasNext()) {
       messageIter = null;
       return false;
@@ -148,8 +126,8 @@ public class KafkaReader {
    * Closes this context
    */
   public void close() throws IOException {
-    if (simpleConsumer != null) {
-      simpleConsumer.close();
+    if (consumer != null) {
+      consumer.close();
     }
   }
 }
