@@ -3,20 +3,16 @@ package co.cask.hydrator;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.AbstractIdleService;
-import kafka.metrics.KafkaMetricsReporter;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
+import kafka.utils.Time;
 import org.I0Itec.zkclient.exception.ZkTimeoutException;
-import org.apache.kafka.common.utils.Time;
 import org.apache.twill.internal.utils.Networks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
-import scala.collection.JavaConverters;
-import scala.collection.Seq;
 
 import java.net.BindException;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -98,11 +94,6 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
       }
 
       @Override
-      public long hiResClockMs() {
-        return System.currentTimeMillis();
-      }
-
-      @Override
       public void sleep(long ms) {
         try {
           Thread.sleep(ms);
@@ -110,7 +101,7 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
           Thread.interrupted();
         }
       }
-    }, Option.apply("embedded-server"), (Seq<KafkaMetricsReporter>) JavaConverters.asScalaBufferConverter(Collections.EMPTY_LIST).asScala());
+    }, Option.apply("embedded-server"));
   }
 
   /**

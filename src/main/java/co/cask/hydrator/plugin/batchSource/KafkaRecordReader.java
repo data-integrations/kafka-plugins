@@ -82,7 +82,7 @@ public class KafkaRecordReader extends RecordReader<KafkaKey, KafkaMessage> {
       }
 
       key.set(request.getTopic(), request.getPartition(), request.getOffset(),
-              request.getOffset(), 0);
+              request.getOffset());
       value = null;
 
       if (reader != null) {

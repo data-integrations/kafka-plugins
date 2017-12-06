@@ -94,8 +94,8 @@ public class KafkaReader {
 
       kafkaKey.clear();
       kafkaKey.set(kafkaRequest.getTopic(), kafkaRequest.getPartition(), currentOffset,
-                 consumerRecord.offset() + 1, consumerRecord.checksum());
-      kafkaKey.setMessageSize(consumerRecord.serializedValueSize());
+                   consumerRecord.offset() + 1);
+      kafkaKey.setMessageSize(value == null ? -1 : value.length);
       currentOffset = consumerRecord.offset() + 1; // increase offset
       return new KafkaMessage(payload, key);
     } else {

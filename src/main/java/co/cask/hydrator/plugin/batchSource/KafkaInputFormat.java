@@ -22,6 +22,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import kafka.common.TopicAndPartition;
@@ -145,9 +146,9 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                                         List<PartitionInfo> partitionInfos,
                                                         Map<TopicAndPartition, Long> offsets,
                                                         KeyValueTable table) {
-    Collection<TopicPartition> topicPartitions =
-      Collections2.transform(partitionInfos,
-                             new Function<PartitionInfo, TopicPartition>() {
+    List<TopicPartition> topicPartitions =
+      Lists.transform(partitionInfos,
+                      new Function<PartitionInfo, TopicPartition>() {
                             @Override
                             public TopicPartition apply(PartitionInfo input) {
                               return new TopicPartition(input.topic(), input.partition());
@@ -184,9 +185,11 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   }
 
   private static Map<TopicPartition, Long> getLatestOffsets(Consumer consumer,
-                                                            Collection<TopicPartition> topicAndPartitions) {
+                                                            List<TopicPartition> topicAndPartitions) {
     consumer.assign(topicAndPartitions);
-    consumer.seekToEnd(topicAndPartitions);
+    for (TopicPartition topicPartition : topicAndPartitions) {
+      consumer.seekToEnd(topicPartition);
+    }
 
     Map<TopicPartition, Long> offsets = new HashMap<>();
     for (TopicPartition topicAndPartition : topicAndPartitions) {
@@ -197,9 +200,11 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   }
 
   private static Map<TopicPartition, Long> getEarliestOffsets(Consumer consumer,
-                                                              Collection<TopicPartition> topicAndPartitions) {
+                                                              List<TopicPartition> topicAndPartitions) {
     consumer.assign(topicAndPartitions);
-    consumer.seekToBeginning(topicAndPartitions);
+    for (TopicPartition topicPartition : topicAndPartitions) {
+      consumer.seekToBeginning(topicPartition);
+    }
 
     Map<TopicPartition, Long> offsets = new HashMap<>();
     for (TopicPartition topicAndPartition : topicAndPartitions) {
