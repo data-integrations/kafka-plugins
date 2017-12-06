@@ -44,6 +44,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Uninterruptibles;
 import kafka.common.TopicAndPartition;
+import org.apache.kafka.clients.consumer.RangeAssignor;
 import org.apache.twill.internal.kafka.client.ZKKafkaClientService;
 import org.apache.twill.internal.utils.Networks;
 import org.apache.twill.internal.zookeeper.InMemoryZKServer;
@@ -89,7 +90,8 @@ public class PipelineTest extends HydratorTestBase {
     // this will make our plugins available to data-pipeline.
     addPluginArtifact(NamespaceId.DEFAULT.artifact("example-plugins", "1.0.0"),
                       parentArtifact,
-                      KafkaBatchSource.class);
+                      KafkaBatchSource.class,
+                      RangeAssignor.class);
 
     zkServer = InMemoryZKServer.builder().setDataDir(TMP_FOLDER.newFolder()).build();
     zkServer.startAndWait();
