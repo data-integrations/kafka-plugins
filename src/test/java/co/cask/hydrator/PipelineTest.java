@@ -124,6 +124,7 @@ public class PipelineTest extends HydratorTestBase {
     sourceProperties.put("referenceName", "kafkaTest");
     sourceProperties.put("tableName", "testKafkaSource");
     sourceProperties.put("topic", "users");
+    sourceProperties.put("maxNumberRecords", "3");
     sourceProperties.put("schema", schema.toString());
     sourceProperties.put("format", "csv");
     ETLStage source =
@@ -145,6 +146,7 @@ public class PipelineTest extends HydratorTestBase {
     messages.put("a", "1,samuel,jackson");
     messages.put("b", "2,dwayne,johnson");
     messages.put("c", "3,christopher,walken");
+    messages.put("d", "4,donald,trump");
     sendKafkaMessage("users", messages);
 
 
@@ -177,19 +179,19 @@ public class PipelineTest extends HydratorTestBase {
     Assert.assertEquals(3, Bytes.toLong(offset));
 
     messages = new HashMap<>();
-    messages.put("d", "4,samuel,jackson");
-    messages.put("e", "5,dwayne,johnson");
+    messages.put("d", "5,samuel,jackson");
+    messages.put("e", "6,dwayne,johnson");
     sendKafkaMessage("users", messages);
     workflowManager.start();
-    TimeUnit.SECONDS.sleep(10);
-    workflowManager.waitForRun(ProgramRunStatus.COMPLETED, 1, TimeUnit.MINUTES);
-    final Map<Long, String> expected2 = ImmutableMap.of(
-      1L, "samuel jackson",
-      2L, "dwayne johnson",
-      3L, "christopher walken",
-      4L, "samuel jackson",
-      5L, "dwayne johnson"
-    );
+    workflowManager.waitForRuns(ProgramRunStatus.COMPLETED, 2, 1, TimeUnit.MINUTES);
+    final Map<Long, String> expected2 = ImmutableMap.<Long, String>builder()
+      .put(1L, "samuel jackson")
+      .put(2L, "dwayne johnson")
+      .put(3L, "christopher walken")
+      .put(4L, "donald trump")
+      .put(5L, "samuel jackson")
+      .put(6L, "dwayne johnson")
+      .build();
 
     outputRecords = new HashSet<>();
     outputRecords.addAll(MockSink.readOutput(outputManager));
@@ -197,7 +199,7 @@ public class PipelineTest extends HydratorTestBase {
     for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
       actual2.put((Long) outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
     }
-    Assert.assertEquals(5, outputRecords.size());
+    Assert.assertEquals(6, outputRecords.size());
     Assert.assertEquals(expected2, actual2);
   }
 

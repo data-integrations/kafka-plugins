@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 
 /**
@@ -83,6 +84,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   public static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic, Map<String, Integer> brokers,
                                                      Set<Integer> partitions,
                                                      Map<TopicAndPartition, Long> initOffsets,
+                                                     @Nullable Long maxNumberRecords,
                                                      KeyValueTable table) throws Exception {
     ArrayList<KafkaRequest> finalRequests;
     HashMap<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo = new HashMap<>();
@@ -110,7 +112,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     }
 
     // Get the latest offsets and generate the KafkaRequests
-    finalRequests = fetchLatestOffsetAndCreateKafkaRequests(offsetRequestInfo, initOffsets, table);
+    finalRequests = fetchLatestOffsetAndCreateKafkaRequests(offsetRequestInfo, initOffsets, maxNumberRecords, table);
 
     Collections.sort(finalRequests, new Comparator<KafkaRequest>() {
       @Override
@@ -179,9 +181,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
    * Gets the latest offsets and create the requests as needed
    */
   private static ArrayList<KafkaRequest> fetchLatestOffsetAndCreateKafkaRequests(
-    Map<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo,
-    Map<TopicAndPartition, Long> offsets,
-    KeyValueTable table) {
+    Map<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo, Map<TopicAndPartition, Long> offsets,
+    @Nullable Long maxNumberRecords, KeyValueTable table) {
     ArrayList<KafkaRequest> finalRequests = new ArrayList<>();
     for (LeaderInfo leader : offsetRequestInfo.keySet()) {
       Long latestTime = kafka.api.OffsetRequest.LatestTime();
@@ -224,6 +225,10 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
           ? earliestOffsetResponse.offsets(topicAndPartition.topic(), topicAndPartition.partition())[0] : start;
         if (earliestOffset == -1) {
           earliestOffset = latestOffset;
+        }
+        if (maxNumberRecords != null) {
+          latestOffset =
+            (latestOffset - earliestOffset) <= maxNumberRecords ? latestOffset : (earliestOffset + maxNumberRecords);
         }
         LOG.debug("Getting kafka messages from topic {}, partition {}, with earlistOffset {}, latest offset {}",
                   topicAndPartition.topic(), topicAndPartition.partition(), earliestOffset, latestOffset);
