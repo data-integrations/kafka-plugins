@@ -50,6 +50,11 @@
         },
         {
           "widget-type": "textbox",
+          "label": "Max Number Records",
+          "name": "maxNumberRecords"
+        },
+        {
+          "widget-type": "textbox",
           "label": "Key Field",
           "name": "keyField"
         },

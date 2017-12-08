@@ -106,6 +106,13 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Macro
     private String initialPartitionOffsets;
 
+    @Description("The maximum of messages the source will read from each topic partition. If the current topic " +
+      "partition does not have this number of messages, the source will read to the latest offset. " +
+      "Note that this is an estimation, the acutal number of messages the source read may be smaller than this number.")
+    @Nullable
+    @Macro
+    private Long maxNumberRecords;
+
     @Description("Output schema of the source, including the timeField and keyField. " +
       "The fields excluding keyField are used in conjunction with the format " +
       "to parse Kafka payloads.")
@@ -183,7 +190,6 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     @Nullable
     public String getKeytabLocation() {
-
       return keytabLocation;
     }
 
@@ -216,6 +222,10 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     public String getOffsetField() {
       return Strings.isNullOrEmpty(offsetField) ? null : offsetField;
+    }
+
+    public long getMaxNumberRecords() {
+      return maxNumberRecords == null ? -1 : maxNumberRecords;
     }
 
     @Nullable
@@ -426,7 +436,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     }
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
-                                                       table);
+                                                       config.getMaxNumberRecords(), table);
     context.setInput(Input.of(config.referenceName,
                               new SourceInputFormatProvider(KafkaInputFormat.class, conf)));
   }

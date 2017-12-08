@@ -86,7 +86,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic, Map<String, String> kafkaConf,
                                               final Set<Integer> partitions,
                                               Map<TopicAndPartition, Long> initOffsets,
-                                              KeyValueTable table) throws Exception {
+                                              long maxNumberRecords, KeyValueTable table) throws Exception {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
     try (Consumer consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
@@ -105,14 +105,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
       }
 
       // Get the latest offsets and generate the KafkaRequests
-      List<KafkaRequest> finalRequests = createKafkaRequests(consumer, kafkaConf, partitionInfos, initOffsets, table);
-
-      Collections.sort(finalRequests, new Comparator<KafkaRequest>() {
-        @Override
-        public int compare(KafkaRequest r1, KafkaRequest r2) {
-          return r1.getTopic().compareTo(r2.getTopic());
-        }
-      });
+      List<KafkaRequest> finalRequests = createKafkaRequests(consumer, kafkaConf, partitionInfos, initOffsets,
+                                                             maxNumberRecords, table);
 
       // TODO: Understand this logic
       Map<KafkaRequest, KafkaKey> offsetKeys = new HashMap<>();
@@ -145,7 +139,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   private static List<KafkaRequest> createKafkaRequests(Consumer consumer, Map<String, String> kafkaConf,
                                                         List<PartitionInfo> partitionInfos,
                                                         Map<TopicAndPartition, Long> offsets,
-                                                        KeyValueTable table) {
+                                                        long maxNumberRecords, KeyValueTable table) {
     List<TopicPartition> topicPartitions =
       Lists.transform(partitionInfos,
                       new Function<PartitionInfo, TopicPartition>() {
@@ -173,6 +167,10 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
       long earliestOffset = start == null || start == -2 ? earliestOffsets.get(topicPartition) : start;
       if (earliestOffset == -1) {
         earliestOffset = latestOffset;
+      }
+      if (maxNumberRecords > 0) {
+        latestOffset =
+          (latestOffset - earliestOffset) <= maxNumberRecords ? latestOffset : (earliestOffset + maxNumberRecords);
       }
       LOG.debug("Getting kafka messages from topic {}, partition {}, with earlistOffset {}, latest offset {}",
                 topicAndPartition.topic(), topicAndPartition.partition(), earliestOffset, latestOffset);
