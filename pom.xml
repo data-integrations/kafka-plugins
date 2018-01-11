@@ -6,7 +6,8 @@
 
   <groupId>co.cask.hydrator</groupId>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.8.0-SNAPSHOT-0.8.2.2</version>
+  <packaging>pom</packaging>
+  <version>1.8.1</version>
 
   <licenses>
     <license>
@@ -16,6 +17,10 @@
       <comments>A business-friendly OSS license</comments>
     </license>
   </licenses>
+  <modules>
+    <module>kafka-plugins-0.8</module>
+    <module>kafka-plugins-0.9</module>
+  </modules>
 
   <developers>
     <developer>
@@ -58,12 +63,13 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.3.0-SNAPSHOT</cdap.version>
-    <hydrator.version>1.8.0-SNAPSHOT</hydrator.version>
+    <cdap.version>4.3.2</cdap.version>
+    <hydrator.version>1.8.2</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
-    <kafka.version>0.8.2.2</kafka.version>
+    <kafka8.version>0.8.2.2</kafka8.version>
+    <kafka9.version>0.9.0.1</kafka9.version>
     <hadoop.version>2.3.0</hadoop.version>
     <!-- properties for script build step that creates the config files for the artifacts -->
     <app.parents>system:cdap-data-streams[4.3.0-SNAPSHOT,5.0.0),system:cdap-data-pipeline[4.3.0-SNAPSHOT,5.0.0)</app.parents>
@@ -113,11 +119,6 @@
       <groupId>co.cask.hydrator</groupId>
       <artifactId>hydrator-common</artifactId>
       <version>${hydrator.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.10</artifactId>
-      <version>${kafka.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -363,7 +364,7 @@
                   var artifactId = project.getProperty("project.artifactId");
                   var version = project.getProperty("project.version");
 
-                  var cfgFile = new java.io.File(targetDir, artifactId + "-" + version + ".json");
+                  var cfgFile = new java.io.File(targetDir, artifactId + ".json");
 
                   if (!cfgFile.exists()) {
                     cfgFile.createNewFile();
