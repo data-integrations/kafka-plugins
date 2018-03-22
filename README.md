@@ -3,12 +3,15 @@ Kafka Plugins
 
 <a href="https://cdap-users.herokuapp.com/"><img alt="Join CDAP community" src="https://cdap-users.herokuapp.com/badge.svg?t=kafka-plugins"/></a> [![Build Status](https://travis-ci.org/hydrator/kafka-plugins.svg?branch=master)](https://travis-ci.org/hydrator/kafka-plugins) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) <img alt="CDAP Realtime Source" src="https://cdap-users.herokuapp.com/assets/cdap-realtime-source.svg"/> []() <img alt="CDAP Realtime Sink" src="https://cdap-users.herokuapp.com/assets/cdap-realtime-sink.svg"/> []() <img src="https://cdap-users.herokuapp.com/assets/cm-available.svg"/>
 
-Kafka source and sink to read/write events to/from kafka. Sink/Source plugins are compatible with Kafka 0.8, 0.9 and 0.10. Alert publisher is only compatible with kafka 0.8.2.
+Kafka source and sink to read/write events to/from kafka. Sink/Source plugins are compatible with Kafka 0.8, 0.9 and 0.10. Alert publisher is only compatible with kafka 0.8.2. 
+The kafka batch source is based on Apache Gobblin.
 
-* [Kafka Source](docs/KAFKASOURCE.md)
-* [Kafka Batch Source](docs/KAFKABATCHSOURCE.md)
-* [Kafka Sink](docs/KAFKAWRITER-SINK.md)
-* [Kafka Alert Publisher](docs/Kafka-alert-publisher.md)
+* [Kafka Source](kafka-plugins-0.8/docs/KAFKASOURCE.md)
+* [Kafka Batch Source for Kafka 8](kafka-plugins-0.8/docs/KAFKABATCHSOURCE.md)
+* [Kafka Batch Source for Kafka 9 and Onward](kafka-plugins-0.9/docs/KAFKABATCHSOURCE.md)
+* [Kafka Batch Sink for Kafka 8](kafka-plugins-0.8/docs/KAFKAWRITER-SINK.md)
+* [Kafka Batch Sink for Kafka 9 and Onward](kafka-plugins-0.9/docs/KAFKAWRITER-SINK.md)
+* [Kafka Alert Publisher](kafka-plugins-0.8/docs/Kafka-alert-publisher.md)
 
 Build
 -----

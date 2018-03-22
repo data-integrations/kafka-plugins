@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>kafka-plugins</artifactId>
+    <groupId>co.cask.hydrator</groupId>
+    <version>1.8.1</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>kafka-plugins-${version}-0.8.2.2</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_2.10</artifactId>
+      <version>${kafka8.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>kafka-plugins-${version}-0.8.2.2</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>3.3.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
+              kafka.serializer.*;kafka.common;</_exportcontents>
+            <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
+            <Embed-Transitive>true</Embed-Transitive>
+            <Embed-Directory>lib</Embed-Directory>
+          </instructions>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>bundle</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
