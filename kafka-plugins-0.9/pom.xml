@@ -9,7 +9,9 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>kafka-plugins-${version}-0.9.0.1</artifactId>
+  <name>Apache Kafka 0.9 plugins</name>
+  <artifactId>kafka-plugins</artifactId>
+  <version>1.8.1-0.9.0.1</version>
 
   <dependencies>
     <dependency>
@@ -26,7 +28,6 @@
   </dependencies>
 
   <build>
-    <finalName>kafka-plugins-${version}-0.9.0.1</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.felix</groupId>
@@ -48,6 +49,25 @@
             <phase>package</phase>
             <goals>
               <goal>bundle</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>co.cask</groupId>
+        <artifactId>cdap-maven-plugin</artifactId>
+        <version>1.0.0</version>
+        <configuration>
+          <cdapArtifacts>
+            <parent>system:cdap-data-pipeline[4.3.0-SNAPSHOT,6.0.0-SNAPSHOT)</parent>
+          </cdapArtifacts>
+        </configuration>
+        <executions>
+          <execution>
+            <id>create-artifact-config</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>create-plugin-json</goal>
             </goals>
           </execution>
         </executions>
