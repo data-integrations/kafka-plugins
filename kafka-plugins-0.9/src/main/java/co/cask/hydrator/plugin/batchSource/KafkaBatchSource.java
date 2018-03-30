@@ -41,6 +41,7 @@ import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
+import co.cask.hydrator.plugin.common.KerberosUtils;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -422,18 +423,15 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       context.createDataset(tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
     }
     table = context.getDataset(tableName);
+
+    // Setup the conf for Kerberos login if needed
+    if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
+      KerberosUtils.setupKerberosLogin(config.getPrincipal(), config.getKeytabLocation());
+    }
+
     Map<String, String> kafkaConf = new HashMap<>();
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
     kafkaConf.putAll(config.getKafkaProperties());
-    if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
-      kafkaConf.put("sasl.jaas.config", String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
-                                                        "        useKeyTab=true \n" +
-                                                        "        storeKey=true  \n" +
-                                                        "        useTicketCache=false  \n" +
-                                                        "        keyTab=\"%s\" \n" +
-                                                        "        principal=\"%s\";", config.getKeytabLocation(),
-                                                      config.getPrincipal()));
-    }
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        config.getMaxNumberRecords(), table);
@@ -455,6 +453,12 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void initialize(BatchRuntimeContext context) throws Exception {
     super.initialize(context);
+
+    // Setup the conf for Kerberos login if needed
+    if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
+      KerberosUtils.setupKerberosLogin(config.getPrincipal(), config.getKeytabLocation());
+    }
+
     schema = config.getSchema();
     Schema messageSchema = config.getMessageSchema();
     for (Schema.Field field : schema.getFields()) {
