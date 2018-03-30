@@ -33,9 +33,9 @@ import co.cask.cdap.format.StructuredRecordStringConverter;
 import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.apache.avro.reflect.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Kafka sink to write to Kafka
@@ -159,6 +160,16 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
     @Nullable
     private String kafkaProperties;
 
+    @Description("The kerberos principal used for the source.")
+    @Macro
+    @Nullable
+    private String principal;
+
+    @Description("The keytab location for the kerberos principal when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String keytabLocation;
+
     @Name("compressionType")
     @Description("Compression type to be applied on message")
     @Macro
@@ -189,6 +200,7 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
       conf.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
       conf.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
 
+      KafkaHelpers.setupKerberosLogin(conf, kafkaSinkConfig.principal, kafkaSinkConfig.keytabLocation);
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
 
       conf.put("async", kafkaSinkConfig.async);

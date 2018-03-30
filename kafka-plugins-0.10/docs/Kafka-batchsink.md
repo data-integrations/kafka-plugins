@@ -7,7 +7,7 @@ Kafka sink that allows you to write events into CSV or JSON to kafka.
 Plugin has the capability to push the data to a Kafka topic. It can also be
 configured to partition events being written to kafka based on a configurable key. 
 The sink can also be configured to operate in sync or async mode and apply different
-compression types to events. This plugin uses kafka 0.8.2 java apis.
+compression types to events. This plugin uses kafka 0.10.2 java apis.
 
 
 Configuration
@@ -28,6 +28,11 @@ Configuration
 
 **key:** Specifies the input field that should be used as the key for the event published into Kafka. 
 It will use String partitioner to determine kafka event should go to which partition. Key field should be of type string.
+
+**principal** The kerberos principal used for the source when kerberos security is enabled for kafka.
+ 
+**keytabLocation** The keytab location for the kerberos principal when kerberos security is enabled for kafka.
+
 
 Example
 -------
