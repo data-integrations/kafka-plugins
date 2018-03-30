@@ -62,6 +62,7 @@ public final class KerberosUtils {
         "useKeyTab=true ",
         "storeKey=true ",
         "useTicketCache=false ",
+        "renewTicket=true ",
         String.format("keyTab=\"%s\" ", keytabLocation),
         String.format("principal=\"%s\"; ", pricipal),
         "}; "
