@@ -41,7 +41,6 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,7 +66,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
 
 
   @Override
-  public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
+  public List<InputSplit> getSplits(JobContext context) {
     Gson gson = new Gson();
     List<KafkaRequest> finalRequests = gson.fromJson(context.getConfiguration().get(KAFKA_REQUEST), LIST_TYPE);
     List<InputSplit> kafkaSplits = new ArrayList<>();
@@ -83,7 +82,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic, Map<String, String> kafkaConf,
                                               final Set<Integer> partitions,
                                               Map<TopicAndPartition, Long> initOffsets,
-                                              long maxNumberRecords, KeyValueTable table) throws Exception {
+                                              long maxNumberRecords, KeyValueTable table) {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
     try (Consumer<byte[], byte[]> consumer =
