@@ -431,6 +431,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     Map<String, String> kafkaConf = new HashMap<>();
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
+    // We save offsets in datasets, no need for Kafka to save them
+    kafkaConf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     kafkaConf.putAll(config.getKafkaProperties());
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
