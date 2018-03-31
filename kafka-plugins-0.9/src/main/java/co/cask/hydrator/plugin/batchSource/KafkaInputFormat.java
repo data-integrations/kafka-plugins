@@ -18,7 +18,7 @@ package co.cask.hydrator.plugin.batchSource;
 
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
-import co.cask.hydrator.plugin.common.KafkaUitls;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -61,8 +61,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   private static final Type LIST_TYPE = new TypeToken<List<KafkaRequest>>() { }.getType();
 
   @Override
-  public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context)
-    throws IOException, InterruptedException {
+  public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context) {
     return new KafkaRecordReader();
   }
 
@@ -87,9 +86,10 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                               long maxNumberRecords, KeyValueTable table) throws Exception {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
-    try (Consumer consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+    try (Consumer<byte[], byte[]> consumer =
+           new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
       // Get Metadata for all topics
-      @SuppressWarnings("unchecked") List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic);
+      List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic);
       if (!partitions.isEmpty()) {
         Collection<PartitionInfo> filteredPartitionInfos =
           Collections2.filter(partitionInfos,
@@ -111,7 +111,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     }
   }
 
-  private static List<KafkaRequest> createKafkaRequests(Consumer consumer, Map<String, String> kafkaConf,
+  private static List<KafkaRequest> createKafkaRequests(Consumer<byte[], byte[]> consumer,
+                                                        Map<String, String> kafkaConf,
                                                         List<PartitionInfo> partitionInfos,
                                                         Map<TopicAndPartition, Long> offsets,
                                                         long maxNumberRecords, KeyValueTable table) {
@@ -123,8 +124,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                               return new TopicPartition(input.topic(), input.partition());
                             }
                           });
-    Map<TopicPartition, Long> latestOffsets = KafkaUitls.getLatestOffsets(consumer, topicPartitions);
-    Map<TopicPartition, Long> earliestOffsets = KafkaUitls.getEarliestOffsets(consumer, topicPartitions);
+    Map<TopicPartition, Long> latestOffsets = KafkaHelpers.getLatestOffsets(consumer, topicPartitions);
+    Map<TopicPartition, Long> earliestOffsets = KafkaHelpers.getEarliestOffsets(consumer, topicPartitions);
 
     List<KafkaRequest> requests = new ArrayList<>();
     for (PartitionInfo partitionInfo : partitionInfos) {

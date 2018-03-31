@@ -10,9 +10,9 @@ import java.util.Map;
 /**
  * Utility class for Kafka operations
  */
-public final class KafkaUitls {
+public final class KafkaHelpers {
   // This class cannot be instantiated
-  private KafkaUitls() {
+  private KafkaHelpers() {
   }
 
   /**
@@ -22,8 +22,8 @@ public final class KafkaUitls {
    * @param topicAndPartitions topic-partitions to fetch the offsets for
    * @return Mapping of topic-partiton to its latest offset
    */
-  public static Map<TopicPartition, Long> getLatestOffsets(Consumer consumer,
-                                                           List<TopicPartition> topicAndPartitions) {
+  public static <K, V> Map<TopicPartition, Long> getLatestOffsets(Consumer<K, V> consumer,
+                                                                  List<TopicPartition> topicAndPartitions) {
     consumer.assign(topicAndPartitions);
     for (TopicPartition topicPartition : topicAndPartitions) {
       consumer.seekToEnd(topicPartition);
@@ -44,8 +44,8 @@ public final class KafkaUitls {
    * @param topicAndPartitions topic-partitions to fetch the offsets for
    * @return Mapping of topic-partiton to its earliest offset
    */
-  public static Map<TopicPartition, Long> getEarliestOffsets(Consumer consumer,
-                                                             List<TopicPartition> topicAndPartitions) {
+  public static <K, V> Map<TopicPartition, Long> getEarliestOffsets(Consumer<K, V> consumer,
+                                                                    List<TopicPartition> topicAndPartitions) {
     consumer.assign(topicAndPartitions);
     for (TopicPartition topicPartition : topicAndPartitions) {
       consumer.seekToBeginning(topicPartition);
