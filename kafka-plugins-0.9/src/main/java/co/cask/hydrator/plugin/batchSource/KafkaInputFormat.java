@@ -18,6 +18,7 @@ package co.cask.hydrator.plugin.batchSource;
 
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
+import co.cask.hydrator.plugin.common.KafkaUitls;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -44,7 +45,6 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -123,8 +123,8 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                               return new TopicPartition(input.topic(), input.partition());
                             }
                           });
-    Map<TopicPartition, Long> latestOffsets = getLatestOffsets(consumer, topicPartitions);
-    Map<TopicPartition, Long> earliestOffsets = getEarliestOffsets(consumer, topicPartitions);
+    Map<TopicPartition, Long> latestOffsets = KafkaUitls.getLatestOffsets(consumer, topicPartitions);
+    Map<TopicPartition, Long> earliestOffsets = KafkaUitls.getEarliestOffsets(consumer, topicPartitions);
 
     List<KafkaRequest> requests = new ArrayList<>();
     for (PartitionInfo partitionInfo : partitionInfos) {
@@ -156,35 +156,5 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
       requests.add(kafkaRequest);
     }
     return requests;
-  }
-
-  private static Map<TopicPartition, Long> getLatestOffsets(Consumer consumer,
-                                                            List<TopicPartition> topicAndPartitions) {
-    consumer.assign(topicAndPartitions);
-    for (TopicPartition topicPartition : topicAndPartitions) {
-      consumer.seekToEnd(topicPartition);
-    }
-
-    Map<TopicPartition, Long> offsets = new HashMap<>();
-    for (TopicPartition topicAndPartition : topicAndPartitions) {
-      long offset = consumer.position(topicAndPartition);
-      offsets.put(topicAndPartition, offset);
-    }
-    return offsets;
-  }
-
-  private static Map<TopicPartition, Long> getEarliestOffsets(Consumer consumer,
-                                                              List<TopicPartition> topicAndPartitions) {
-    consumer.assign(topicAndPartitions);
-    for (TopicPartition topicPartition : topicAndPartitions) {
-      consumer.seekToBeginning(topicPartition);
-    }
-
-    Map<TopicPartition, Long> offsets = new HashMap<>();
-    for (TopicPartition topicAndPartition : topicAndPartitions) {
-      long offset = consumer.position(topicAndPartition);
-      offsets.put(topicAndPartition, offset);
-    }
-    return offsets;
   }
 }
