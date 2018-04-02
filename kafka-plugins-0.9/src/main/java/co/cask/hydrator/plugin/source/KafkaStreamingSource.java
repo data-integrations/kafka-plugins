@@ -100,12 +100,15 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     kafkaParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, conf.getBrokers());
     // Spark saves the offsets in checkpoints, no need for Kafka to save them
     kafkaParams.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+    kafkaParams.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
+    kafkaParams.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     // TODO: add groupid for checkpointing
     kafkaParams.putAll(conf.getKafkaProperties());
 
     Properties properties = new Properties();
     properties.putAll(kafkaParams);
-    try (Consumer<byte[], byte[]> consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+    try (Consumer<byte[], byte[]> consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(),
+                                                                 new ByteArrayDeserializer())) {
       Map<TopicPartition, Long> offsets = conf.getInitialPartitionOffsets(getPartitions(consumer));
       // KafkaUtils doesn't understand -1 and -2 as smallest offset and latest offset.
       // so we have to replace them with the actual smallest and latest
@@ -139,7 +142,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
 
       return KafkaUtils.createDirectStream(
         context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
-        ConsumerStrategies.<byte[], byte[]>Assign(offsets.keySet(), kafkaParams, offsets)
+        ConsumerStrategies.<byte[], byte[]>Assign(new HashSet<>(offsets.keySet()), kafkaParams, offsets)
       ).transform(new RecordTransform(conf));
     }
   }

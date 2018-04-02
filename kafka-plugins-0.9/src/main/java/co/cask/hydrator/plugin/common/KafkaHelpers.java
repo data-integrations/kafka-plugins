@@ -25,9 +25,7 @@ public final class KafkaHelpers {
   public static <K, V> Map<TopicPartition, Long> getLatestOffsets(Consumer<K, V> consumer,
                                                                   List<TopicPartition> topicAndPartitions) {
     consumer.assign(topicAndPartitions);
-    for (TopicPartition topicPartition : topicAndPartitions) {
-      consumer.seekToEnd(topicPartition);
-    }
+    consumer.seekToEnd(topicAndPartitions);
 
     Map<TopicPartition, Long> offsets = new HashMap<>();
     for (TopicPartition topicAndPartition : topicAndPartitions) {
@@ -47,9 +45,7 @@ public final class KafkaHelpers {
   public static <K, V> Map<TopicPartition, Long> getEarliestOffsets(Consumer<K, V> consumer,
                                                                     List<TopicPartition> topicAndPartitions) {
     consumer.assign(topicAndPartitions);
-    for (TopicPartition topicPartition : topicAndPartitions) {
-      consumer.seekToBeginning(topicPartition);
-    }
+    consumer.seekToBeginning(topicAndPartitions);
 
     Map<TopicPartition, Long> offsets = new HashMap<>();
     for (TopicPartition topicAndPartition : topicAndPartitions) {

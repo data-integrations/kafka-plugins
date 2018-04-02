@@ -71,7 +71,7 @@
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
     <kafka8.version>0.8.2.2</kafka8.version>
-    <kafka9.version>0.9.0.1</kafka9.version>
+    <kafka9.version>0.10.2.0</kafka9.version>
     <hadoop.version>2.3.0</hadoop.version>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
@@ -117,19 +117,11 @@
           <groupId>org.apache.kafka</groupId>
           <artifactId>kafka_2.10</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-core_2.10</artifactId>
+        </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-data-pipeline</artifactId>
-      <version>${cdap.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-data-streams</artifactId>
-      <version>${cdap.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.hydrator</groupId>
