@@ -135,9 +135,9 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
-              kafka.serializer.*;kafka.common;org.apache.kafka.common.serialization.*;
-              org.apache.kafka.clients.consumer.*</_exportcontents>
+            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka010.*;
+              kafka.common;org.apache.kafka.common.serialization.*;
+              org.apache.kafka.clients.consumer.*;com.google.common.base.*;</_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
             <Embed-Directory>lib</Embed-Directory>
@@ -159,6 +159,7 @@
         <configuration>
           <cdapArtifacts>
             <parent>system:cdap-data-pipeline[4.3.0-SNAPSHOT,6.0.0-SNAPSHOT)</parent>
+            <parent>system:cdap-data-streams[4.3.0-SNAPSHOT,6.0.0-SNAPSHOT)</parent>
           </cdapArtifacts>
         </configuration>
         <executions>
