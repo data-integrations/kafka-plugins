@@ -41,7 +41,7 @@ import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
-import co.cask.hydrator.plugin.common.KerberosUtils;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -424,15 +424,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     }
     table = context.getDataset(tableName);
 
-    // Setup the conf for Kerberos login if needed
-    if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
-      KerberosUtils.setupKerberosLogin(config.getPrincipal(), config.getKeytabLocation());
-    }
-
     Map<String, String> kafkaConf = new HashMap<>();
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
     // We save offsets in datasets, no need for Kafka to save them
     kafkaConf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+    KafkaHelpers.setupKerberosLogin(kafkaConf, config.getPrincipal(), config.getKeytabLocation());
     kafkaConf.putAll(config.getKafkaProperties());
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
@@ -455,11 +451,6 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void initialize(BatchRuntimeContext context) throws Exception {
     super.initialize(context);
-
-    // Setup the conf for Kerberos login if needed
-    if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
-      KerberosUtils.setupKerberosLogin(config.getPrincipal(), config.getKeytabLocation());
-    }
 
     schema = config.getSchema();
     Schema messageSchema = config.getMessageSchema();

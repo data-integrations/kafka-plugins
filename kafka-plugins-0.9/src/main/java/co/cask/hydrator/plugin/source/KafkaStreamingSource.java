@@ -29,7 +29,6 @@ import co.cask.cdap.etl.api.streaming.StreamingContext;
 import co.cask.cdap.etl.api.streaming.StreamingSource;
 import co.cask.cdap.format.RecordFormats;
 import co.cask.hydrator.plugin.common.KafkaHelpers;
-import co.cask.hydrator.plugin.common.KerberosUtils;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import kafka.api.OffsetRequest;
@@ -91,17 +90,13 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
   public JavaDStream<StructuredRecord> getStream(StreamingContext context) throws Exception {
     context.registerLineage(conf.referenceName);
 
-    // Setup the conf for Kerberos login if needed
-    if (conf.getKeytabLocation() != null && conf.getPrincipal() != null) {
-      KerberosUtils.setupKerberosLogin(conf.getPrincipal(), conf.getKeytabLocation());
-    }
-
     Map<String, Object> kafkaParams = new HashMap<>();
     kafkaParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, conf.getBrokers());
     // Spark saves the offsets in checkpoints, no need for Kafka to save them
     kafkaParams.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     kafkaParams.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     kafkaParams.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
+    KafkaHelpers.setupKerberosLogin(kafkaParams, conf.getPrincipal(), conf.getKeytabLocation());
     // TODO: add groupid for checkpointing
     kafkaParams.putAll(conf.getKafkaProperties());
 
