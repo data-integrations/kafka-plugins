@@ -44,7 +44,6 @@ import org.apache.twill.zookeeper.ZKClientService;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
@@ -59,7 +58,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Tests for Spark plugins.
  */
-@Ignore
 public class SparkPluginTest extends HydratorTestBase {
 
   @ClassRule
