@@ -99,9 +99,9 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     kafkaParams.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     kafkaParams.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     KafkaHelpers.setupKerberosLogin(kafkaParams, conf.getPrincipal(), conf.getKeytabLocation());
-    // Try to create a unique string for the group.id using the pipeline name and the topic
-    kafkaParams.put("group.id", Joiner.on("-").join(context.getPipelineName().length(), context.getPipelineName(),
-                                                    conf.getTopic().length(), conf.getTopic()));
+    // Create a unique string for the group.id using the pipeline name and the topic
+    kafkaParams.put("group.id", Joiner.on("-").join(context.getPipelineName().length(), conf.getTopic().length(),
+                                                    context.getPipelineName(), conf.getTopic()));
     kafkaParams.putAll(conf.getKafkaProperties());
 
     Properties properties = new Properties();
