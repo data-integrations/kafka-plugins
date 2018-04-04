@@ -148,8 +148,7 @@
         <configuration>
           <instructions>
             <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka010.*;
-              kafka.common;org.apache.kafka.common.serialization.*;
-              org.apache.kafka.clients.consumer.*;com.google.common.base.*;</_exportcontents>
+              org.apache.kafka.*;com.google.common.base.*;</_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
             <Embed-Directory>lib</Embed-Directory>

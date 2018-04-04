@@ -29,6 +29,7 @@ import co.cask.cdap.etl.api.streaming.StreamingContext;
 import co.cask.cdap.etl.api.streaming.StreamingSource;
 import co.cask.cdap.format.RecordFormats;
 import co.cask.hydrator.plugin.common.KafkaHelpers;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import kafka.api.OffsetRequest;
@@ -52,6 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -97,7 +99,9 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     kafkaParams.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     kafkaParams.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     KafkaHelpers.setupKerberosLogin(kafkaParams, conf.getPrincipal(), conf.getKeytabLocation());
-    // TODO: add groupid for checkpointing
+    // Try to create a unique string for the group.id using the pipeline name and the topic
+    kafkaParams.put("group.id", Joiner.on("-").join(context.getPipelineName().length(), context.getPipelineName(),
+                                                    conf.getTopic().length(), conf.getTopic()));
     kafkaParams.putAll(conf.getKafkaProperties());
 
     Properties properties = new Properties();
@@ -137,7 +141,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
 
       return KafkaUtils.createDirectStream(
         context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
-        ConsumerStrategies.<byte[], byte[]>Assign(new HashSet<>(offsets.keySet()), kafkaParams, offsets)
+        ConsumerStrategies.<byte[], byte[]>Subscribe(Collections.singleton(conf.getTopic()), kafkaParams, offsets)
       ).transform(new RecordTransform(conf));
     }
   }
