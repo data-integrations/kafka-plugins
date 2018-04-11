@@ -20,7 +20,7 @@
   </licenses>
   <modules>
     <module>kafka-plugins-0.8</module>
-    <module>kafka-plugins-0.9</module>
+    <module>kafka-plugins-0.10</module>
   </modules>
 
   <developers>
@@ -71,7 +71,7 @@
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
     <kafka8.version>0.8.2.2</kafka8.version>
-    <kafka9.version>0.10.2.0</kafka9.version>
+    <kafka10.version>0.10.2.0</kafka10.version>
     <hadoop.version>2.3.0</hadoop.version>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
@@ -277,15 +277,6 @@
           <artifactId>maven-bundle-plugin</artifactId>
           <version>2.5.4</version>
           <extensions>true</extensions>
-          <configuration>
-            <instructions>
-              <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka010.*;
-                org.apache.kafka.common.*;</_exportcontents>
-              <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
-              <Embed-Transitive>true</Embed-Transitive>
-              <Embed-Directory>lib</Embed-Directory>
-            </instructions>
-          </configuration>
           <executions>
             <execution>
               <phase>package</phase>
@@ -302,6 +293,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.14.1</version>
+        <configuration>
+          <argLine>-Xmx2048m -Djava.awt.headless=true -XX:MaxPermSize=256m -XX:+UseConcMarkSweepGC -XX:OnOutOfMemoryError="kill -9 %p" -XX:+HeapDumpOnOutOfMemoryError</argLine>
+          <reuseForks>false</reuseForks>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>

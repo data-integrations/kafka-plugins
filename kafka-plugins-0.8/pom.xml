@@ -120,7 +120,6 @@
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>3.3.0</version>
-        <extensions>true</extensions>
         <configuration>
           <instructions>
             <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
@@ -130,14 +129,6 @@
             <Embed-Directory>lib</Embed-Directory>
           </instructions>
         </configuration>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>bundle</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>co.cask</groupId>
@@ -146,6 +137,7 @@
         <configuration>
           <cdapArtifacts>
             <parent>system:cdap-data-pipeline[4.3.0-SNAPSHOT,6.0.0-SNAPSHOT)</parent>
+            <parent>system:cdap-data-streams[4.3.0-SNAPSHOT,6.0.0-SNAPSHOT)</parent>
           </cdapArtifacts>
         </configuration>
         <executions>
