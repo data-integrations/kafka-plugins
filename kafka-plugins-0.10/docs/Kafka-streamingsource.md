@@ -64,6 +64,9 @@ If set, this field must be present in the schema property and must be a long.
 
 **maxRatePerPartition:** Maximum number of records to read per second per partition. Defaults to 1000.
 
+**principal** The kerberos principal used for the source when kerberos security is enabled for kafka.
+
+**keytabLocation** The keytab location for the kerberos principal when kerberos security is enabled for kafka.
 
 Example
 -------

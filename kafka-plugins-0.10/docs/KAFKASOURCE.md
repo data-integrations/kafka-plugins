@@ -1,18 +1,18 @@
 [![Build Status](https://travis-ci.org/hydrator/kafka-plugins.svg?branch=master)](https://travis-ci.org/hydrator/kafka-plugins) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Kafka Batch Source
+Kafka Source
 ===========
 
-Kafka batch source that emits a records with user specified schema.
+Kafka streaming source that emits a records with user specified schema.
 
-<img align="center" src="kafka-batch-source-plugins-config.png"  width="400" alt="plugin configuration" />
+<img align="center" src="kafka-source-plugin-config.png"  width="400" alt="plugin configuration" />
 
 Usage Notes
 -----------
 
-Kafka Batch Source can be used to read events from a kafka topic. It uses kafka consumer [0.10.2 apis](https://kafka.apache.org/0100/documentation.html) to read events from a kafka topic. The Kafka Batch Source supports providing additional kafka properties for the kafka consumer, reading from kerberos-enabled kafka and limiting the number of records read. Kafka Batch Source converts incoming kafka events into cdap structured records which then can be used for further transformations.
+Kafka Streaming Source can be used to read events from a kafka topic. It uses kafka consumer [0.10.2 apis](https://kafka.apache.org/0100/documentation.html) to read events from a kafka topic. Kafka Source converts incoming kafka events into cdap structured records which then can be used for further transformations.
 
-The source will read from the earliest available offset or the initial offset that specified in the config for the first run, remember the last offset it read last run and continue from that offset for the next run. 
+The source provides capabilities to read from latest offset or from beginning or from the provided kafka offset. The plugin relies on Spark Streaming offset [storage capabilities](https://spark.apache.org/docs/latest/streaming-kafka-0-10-integration.html) to manager offsets and checkpoints.
 
 Plugin Configuration
 ---------------------
@@ -21,17 +21,16 @@ Plugin Configuration
 | :------------ | :------: | :----- | :---------- |
 | **Kafka Brokers** | **Y** | N/A | List of Kafka brokers specified in host1:port1,host2:port2 form. |
 | **Kafka Topic** | **Y** | N/A | The Kafka topic to read from. |
-| **Offset Table Name** | **Y** | N/A | Optional table name to track the latest offset we read from kafka. It is recommended to name it same as the pipeline name to avoid conflict on table names. By default it will be the topic name.
 | **Topic Partition** | **N** | N/A | List of topic partitions to read from. If not specified, all partitions will be read.  |
-| **Initial Partition Offsets** | **N** | N/A | The initial offset for each topic partition. If this is not specified, earliest offset will be used. This offset will only be used for the first run of the pipeline. Any subsequent run will read from the latest offset from previous run.  Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. |
+| **Default Initial Offset** | **N** | N/A | The default initial offset for all topic partitions. An offset of -2 means the smallest offset. An offset of -1 means the latest offset. Defaults to -1. Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. If you wish to set different initial offsets for different partitions, use the initialPartitionOffsets property. |
+| **Initial Partition Offsets** | **N** | N/A | The initial offset for each topic partition. If this is not specified, all partitions will use the same initial offset, which is determined by the defaultInitialOffset property. Any partitions specified in the partitions property, but not in this property will use the defaultInitialOffset. An offset of -2 means the smallest offset. An offset of -1 means the latest offset. Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. |
+| **Time Field** | **N** | N/A | Optional name of the field containing the read time of the batch. If this is not set, no time field will be added to output records. If set, this field must be present in the schema property and must be a long. |
 | **Key Field** | **N** | N/A | Optional name of the field containing the message key. If this is not set, no key field will be added to output records. If set, this field must be present in the schema property and must be bytes. |
 | **Partition Field** | **N** | N/A | Optional name of the field containing the partition the message was read from. If this is not set, no partition field will be added to output records. If set, this field must be present in the schema property and must be an int. |
 | **Offset Field** | **N** | N/A | Optional name of the field containing the partition offset the message was read from. If this is not set, no offset field will be added to output records. If set, this field must be present in the schema property and must be a long. |
-| **Max Number Records** | **N** | N/A | The maximum of messages the source will read from each topic partition. If the current topic partition does not have this number of messages, the source will read to the latest offset. Note that this is an estimation, the acutal number of messages the source read may be smaller than this number. |
+| **Format** | **N** | N/A | Optional format of the Kafka event message. Any format supported by CDAP is supported. For example, a value of 'csv' will attempt to parse Kafka payloads as comma-separated values. If no format is given, Kafka message payloads will be treated as bytes. |
 | **Kerberos Principal** | **N** | N/A | The kerberos principal used for the source when kerberos security is enabled for kafka. |
 | **Keytab Location** | **N** | N/A | The keytab location for the kerberos principal when kerberos security is enabled for kafka. |
-| **Additional Kafka Consumer Properties** | **N** | N/A | Additional kafka consumer properties to set. |
-| **Format** | **N** | N/A | Optional format of the Kafka event message. Any format supported by CDAP is supported. For example, a value of 'csv' will attempt to parse Kafka payloads as comma-separated values. If no format is given, Kafka message payloads will be treated as bytes. |
 
 
 Build
