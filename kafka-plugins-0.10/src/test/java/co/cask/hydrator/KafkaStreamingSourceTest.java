@@ -94,7 +94,6 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
   @ClassRule
   public static TemporaryFolder tmpFolder = new TemporaryFolder();
 
-
   @BeforeClass
   public static void setupTest() throws Exception {
     // add the artifact for data pipeline app

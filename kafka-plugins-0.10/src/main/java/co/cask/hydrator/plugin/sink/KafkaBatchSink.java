@@ -43,10 +43,10 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * Kafka sink to write to Kafka
@@ -54,8 +54,8 @@ import javax.annotation.Nullable;
 @Plugin(type = BatchSink.PLUGIN_TYPE)
 @Name("Kafka")
 @Description("KafkaSink to write events to kafka")
-public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
-  private static final Logger LOG = LoggerFactory.getLogger(Kafka.class);
+public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaBatchSink.class);
 
   // Configuration for the plugin.
   private final Config producerConfig;
@@ -65,7 +65,7 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   // Static constants for configuring Kafka producer.
   private static final String ACKS_REQUIRED = "acks";
 
-  public Kafka(Config producerConfig) {
+  public KafkaBatchSink(Config producerConfig) {
     super(producerConfig);
     this.producerConfig = producerConfig;
     this.kafkaOutputFormatProvider = new KafkaOutputFormatProvider(producerConfig);
@@ -75,9 +75,7 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     super.configurePipeline(pipelineConfigurer);
 
-    if (!producerConfig.async.equalsIgnoreCase("true") && !producerConfig.async.equalsIgnoreCase("false")) {
-      throw new IllegalArgumentException("Async flag has to be either TRUE or FALSE.");
-    }
+    producerConfig.validate();
   }
 
   @Override
@@ -185,6 +183,14 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
       this.format = format;
       this.kafkaProperties = kafkaProperties;
       this.compressionType = compressionType;
+    }
+
+    private void validate() {
+      if (!async.equalsIgnoreCase("true") && !async.equalsIgnoreCase("false")) {
+        throw new IllegalArgumentException("Async flag has to be either TRUE or FALSE.");
+      }
+
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
     }
   }
 

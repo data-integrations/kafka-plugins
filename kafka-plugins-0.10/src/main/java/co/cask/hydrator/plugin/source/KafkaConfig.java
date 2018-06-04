@@ -24,21 +24,16 @@ import co.cask.cdap.api.dataset.lib.KeyValue;
 import co.cask.cdap.format.RecordFormats;
 import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferencePluginConfig;
-import com.google.common.annotations.VisibleForTesting;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import org.apache.kafka.common.TopicPartition;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Conf for Kafka streaming source.
@@ -136,30 +131,6 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     super("");
     defaultInitialOffset = -1L;
     maxRatePerPartition = 1000;
-  }
-
-  @VisibleForTesting
-  public KafkaConfig(String referenceName, String brokers, String topic, String schema, String format,
-                     String timeField, String keyField, String partitionField, String offsetField) {
-    this(referenceName, brokers, topic, null, null, null, schema, format,
-         timeField, keyField, partitionField, offsetField);
-  }
-
-  public KafkaConfig(String referenceName, String brokers, String topic, String partitions,
-                     String initialPartitionOffsets, Long defaultInitialOffset, String schema, String format,
-                     String timeField, String keyField, String partitionField, String offsetField) {
-    super(referenceName);
-    this.brokers = brokers;
-    this.topic = topic;
-    this.partitions = partitions;
-    this.initialPartitionOffsets = initialPartitionOffsets;
-    this.defaultInitialOffset = defaultInitialOffset;
-    this.schema = schema;
-    this.format = format;
-    this.timeField = timeField;
-    this.keyField = keyField;
-    this.partitionField = partitionField;
-    this.offsetField = offsetField;
   }
 
   public String getTopic() {
@@ -426,5 +397,7 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
           format, messageSchema, e.getMessage()), e);
       }
     }
+
+    KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
   }
 }

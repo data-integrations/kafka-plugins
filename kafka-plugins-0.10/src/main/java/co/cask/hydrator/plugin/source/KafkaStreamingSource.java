@@ -52,14 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Kafka Streaming source
@@ -99,7 +92,9 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     kafkaParams.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     kafkaParams.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     KafkaHelpers.setupKerberosLogin(kafkaParams, conf.getPrincipal(), conf.getKeytabLocation());
-    // Create a unique string for the group.id using the pipeline name and the topic
+    // Create a unique string for the group.id using the pipeline name and the topic.
+    // group.id is a Kafka consumer property that uniquely identifies the group of
+    // consumer processes to which this consumer belongs.
     kafkaParams.put("group.id", Joiner.on("-").join(context.getPipelineName().length(), conf.getTopic().length(),
                                                     context.getPipelineName(), conf.getTopic()));
     kafkaParams.putAll(conf.getKafkaProperties());

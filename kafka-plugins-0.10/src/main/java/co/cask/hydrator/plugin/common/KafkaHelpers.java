@@ -16,15 +16,16 @@
 
 package co.cask.hydrator.plugin.common;
 
+import com.google.common.base.Strings;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * Utility class for Kafka operations
@@ -100,6 +101,22 @@ public final class KafkaHelpers {
     } else {
       LOG.debug("Not adding Kerberos login conf to Kafka since either the principal {} or the keytab {} is null",
                 principal, keytabLocation);
+    }
+  }
+
+  /**
+   * Validates whether the principal and keytab are both set or both of them are null/empty
+   *
+   * @param principal Kerberos principal
+   * @param keytab Kerberos keytab for the principal
+   */
+  public static void validateKerberosSetting(@Nullable String principal, @Nullable String keytab) {
+    if (Strings.isNullOrEmpty(principal) != Strings.isNullOrEmpty(keytab)) {
+      String emptyField = Strings.isNullOrEmpty(principal) ? "principal" : "keytab";
+      String message = emptyField + " is empty. When Kerberos security is enabled for Kafka, " +
+              "then both the principal and the keytab have " +
+              "to be specified. If Kerberos is not enabled, then both should be empty.";
+      throw new IllegalArgumentException(message);
     }
   }
 }

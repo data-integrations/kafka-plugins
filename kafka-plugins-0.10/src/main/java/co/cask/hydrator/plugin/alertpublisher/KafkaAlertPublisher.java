@@ -27,6 +27,7 @@ import co.cask.cdap.etl.api.AlertPublisher;
 import co.cask.cdap.etl.api.AlertPublisherContext;
 import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.hydrator.common.KeyValueListParser;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import kafka.common.Topic;
@@ -37,11 +38,11 @@ import org.apache.kafka.common.errors.InvalidTopicException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import javax.annotation.Nullable;
 
 /**
  * Kafka Alert Publisher
@@ -169,6 +170,8 @@ public class KafkaAlertPublisher extends AlertPublisher {
         throw new IllegalArgumentException(String.format("Topic name %s is not a valid kafka topic. Please provide " +
                                                            "valid kafka topic name. %s", topic, e.getMessage()));
       }
+
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
     }
   }
 }

@@ -39,7 +39,7 @@ import co.cask.cdap.test.DataSetManager;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.cdap.test.WorkflowManager;
 import co.cask.hydrator.plugin.alertpublisher.KafkaAlertPublisher;
-import co.cask.hydrator.plugin.sink.Kafka;
+import co.cask.hydrator.plugin.sink.KafkaBatchSink;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
@@ -55,21 +55,10 @@ import org.apache.twill.kafka.client.FetchedMessage;
 import org.apache.twill.kafka.client.KafkaClientService;
 import org.apache.twill.kafka.client.KafkaConsumer;
 import org.apache.twill.zookeeper.ZKClientService;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -100,7 +89,7 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
     // this will make our plugins available to data-pipeline.
     addPluginArtifact(NamespaceId.DEFAULT.artifact("example-plugins", "1.0.0"),
                       parentArtifact,
-                      Kafka.class,
+                      KafkaBatchSink.class,
                       KafkaAlertPublisher.class,
                       RangeAssignor.class,
                       StringSerializer.class);
@@ -157,7 +146,7 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
 
     ETLStage source = new ETLStage("source", MockSource.getPlugin(inputName));
     ETLStage sink =
-      new ETLStage("sink", new ETLPlugin("Kafka", Kafka.PLUGIN_TYPE, sinkProperties, null));
+      new ETLStage("sink", new ETLPlugin("Kafka", KafkaBatchSink.PLUGIN_TYPE, sinkProperties, null));
     ETLStage transform = new ETLStage("nullAlert", NullAlertTransform.getPlugin("id"));
     ETLStage alert =
       new ETLStage("alert", new ETLPlugin("KafkaAlerts", KafkaAlertPublisher.PLUGIN_TYPE, alertProperties));

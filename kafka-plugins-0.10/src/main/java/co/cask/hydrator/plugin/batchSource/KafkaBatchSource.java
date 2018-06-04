@@ -50,14 +50,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Kafka batch source.
@@ -398,6 +393,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
             format, messageSchema, e.getMessage()), e);
         }
       }
+
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
     }
   }
 
