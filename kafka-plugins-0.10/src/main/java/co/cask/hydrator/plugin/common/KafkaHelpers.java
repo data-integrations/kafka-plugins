@@ -19,6 +19,7 @@ package co.cask.hydrator.plugin.common;
 import com.google.common.base.Strings;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +91,7 @@ public final class KafkaHelpers {
     if (principal != null && keytabLocation != null) {
       LOG.debug("Adding Kerberos login conf to Kafka for principal {} and keytab {}",
                 principal, keytabLocation);
-      conf.put("sasl.jaas.config", String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
+      conf.put(SaslConfigs.SASL_JAAS_CONFIG, String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
                                                    "        useKeyTab=true \n" +
                                                    "        storeKey=true  \n" +
                                                    "        useTicketCache=false  \n" +
