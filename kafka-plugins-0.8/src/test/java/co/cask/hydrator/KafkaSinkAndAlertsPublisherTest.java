@@ -45,9 +45,10 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.gson.Gson;
+import org.apache.kafka.clients.producer.Partitioner;
+import org.apache.kafka.clients.producer.internals.DefaultPartitioner;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.twill.common.Cancellable;
-import org.apache.twill.internal.kafka.EmbeddedKafkaServer;
 import org.apache.twill.internal.kafka.client.ZKKafkaClientService;
 import org.apache.twill.internal.utils.Networks;
 import org.apache.twill.internal.zookeeper.InMemoryZKServer;
@@ -102,7 +103,8 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
                       parentArtifact,
                       Kafka.class,
                       KafkaAlertPublisher.class,
-                      StringSerializer.class);
+                      StringSerializer.class,
+                      Partitioner.class, DefaultPartitioner.class);
 
     zkServer = InMemoryZKServer.builder().setDataDir(TMP_FOLDER.newFolder()).build();
     zkServer.startAndWait();

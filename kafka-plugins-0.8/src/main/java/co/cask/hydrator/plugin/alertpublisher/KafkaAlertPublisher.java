@@ -29,7 +29,6 @@ import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.hydrator.common.KeyValueListParser;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
-import kafka.common.InvalidTopicException;
 import kafka.common.Topic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -155,7 +154,7 @@ public class KafkaAlertPublisher extends AlertPublisher {
 
       try {
         Topic.validate(topic);
-      } catch (InvalidTopicException e) {
+      } catch (Exception e) {
         throw new IllegalArgumentException(String.format("Topic name %s is not a valid kafka topic. Please provide " +
                                                            "valid kafka topic name. %s", topic, e.getMessage()));
       }

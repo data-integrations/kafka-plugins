@@ -60,6 +60,11 @@
       <id>sonatype-snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </repository>
+    <repository>
+      <id>hortonworks</id>
+      <name>hortonworks repo</name>
+      <url>http://repo.hortonworks.com/content/repositories/releases/</url>
+    </repository>
   </repositories>
 
   <properties>

@@ -50,7 +50,6 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import kafka.common.TopicAndPartition;
 import kafka.serializer.DefaultDecoder;
 import org.apache.spark.streaming.kafka.KafkaUtils;
-import org.apache.twill.internal.kafka.EmbeddedKafkaServer;
 import org.apache.twill.internal.kafka.client.ZKKafkaClientService;
 import org.apache.twill.internal.zookeeper.InMemoryZKServer;
 import org.apache.twill.kafka.client.Compression;
