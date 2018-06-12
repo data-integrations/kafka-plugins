@@ -47,9 +47,12 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Uninterruptibles;
-import org.apache.kafka.common.TopicPartition;
+import kafka.common.TopicAndPartition;
+import kafka.serializer.DefaultDecoder;
+import org.apache.kafka.clients.consumer.RangeAssignor;
+import org.apache.kafka.clients.producer.internals.DefaultPartitioner;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.spark.streaming.kafka010.KafkaUtils;
+import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.apache.twill.internal.kafka.client.ZKKafkaClientService;
 import org.apache.twill.internal.zookeeper.InMemoryZKServer;
 import org.apache.twill.kafka.client.Compression;
@@ -111,8 +114,9 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
                         new ArtifactVersion(DATASTREAMS_ARTIFACT_ID.getVersion()), true)
     );
     addPluginArtifact(NamespaceId.DEFAULT.artifact("spark-plugins", "1.0.0"), parents,
-                      KafkaStreamingSource.class, KafkaUtils.class, ByteArrayDeserializer.class, TopicPartition.class,
-                      HTTPPollConfig.class);
+                      KafkaStreamingSource.class, KafkaUtils.class, ByteArrayDeserializer.class,
+                      TopicAndPartition.class,
+                      HTTPPollConfig.class, RangeAssignor.class, DefaultPartitioner.class, DefaultDecoder.class);
 
     zkServer = InMemoryZKServer.builder().setDataDir(TMP_FOLDER.newFolder()).build();
     zkServer.startAndWait();

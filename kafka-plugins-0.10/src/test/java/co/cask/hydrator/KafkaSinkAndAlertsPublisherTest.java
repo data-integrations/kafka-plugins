@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.RangeAssignor;
+import org.apache.kafka.clients.producer.internals.DefaultPartitioner;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.twill.common.Cancellable;
 import org.apache.twill.internal.kafka.client.ZKKafkaClientService;
@@ -62,7 +63,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -96,7 +104,8 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
                       KafkaBatchSink.class,
                       KafkaAlertPublisher.class,
                       RangeAssignor.class,
-                      StringSerializer.class);
+                      StringSerializer.class,
+                      DefaultPartitioner.class);
 
     zkServer = InMemoryZKServer.builder().setDataDir(TMP_FOLDER.newFolder()).build();
     zkServer.startAndWait();

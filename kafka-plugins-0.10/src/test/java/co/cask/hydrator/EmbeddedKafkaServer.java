@@ -23,7 +23,6 @@ import kafka.metrics.KafkaMetricsReporter;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.I0Itec.zkclient.exception.ZkTimeoutException;
-import org.apache.kafka.common.utils.Time;
 import org.apache.twill.internal.utils.Networks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,16 +103,10 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
     Seq<KafkaMetricsReporter> metricsReporters =
       JavaConverters.collectionAsScalaIterableConverter(
         Collections.<KafkaMetricsReporter>emptyList()).asScala().toSeq();
-    return new KafkaServer(kafkaConfig, new Time() {
-
+    return new KafkaServer(kafkaConfig, new kafka.utils.Time() {
       @Override
       public long milliseconds() {
         return System.currentTimeMillis();
-      }
-
-      @Override
-      public long nanoseconds() {
-        return System.nanoTime();
       }
 
       @Override
@@ -121,15 +114,15 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
         try {
           Thread.sleep(ms);
         } catch (InterruptedException e) {
-          Thread.interrupted();
+          Thread.currentThread().interrupt();
         }
       }
 
       @Override
-      public long hiResClockMs() {
-        return System.currentTimeMillis();
+      public long nanoseconds() {
+        return System.nanoTime();
       }
-    }, Option.apply("embedded-server"), metricsReporters);
+    }, Option.apply("embedded-server"));
   }
 
   /**
@@ -147,6 +140,6 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
       prop.setProperty("port", Integer.toString(randomPort));
     }
 
-    return new KafkaConfig(prop);
+    return new KafkaConfig(prop, true);
   }
 }
