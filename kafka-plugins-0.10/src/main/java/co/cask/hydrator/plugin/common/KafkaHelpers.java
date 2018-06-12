@@ -16,23 +16,36 @@
 
 package co.cask.hydrator.plugin.common;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.config.SaslConfigs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import javax.annotation.Nullable;
+import javax.security.auth.login.Configuration;
 
 /**
  * Utility class for Kafka operations
  */
 public final class KafkaHelpers {
+  public static final String KRB_KEYTAB = "kafka.kerberos.keytab";
+  public static final String KRB_PRINCIPAL = "kafka.kerberos.principal";
+
   private static final Logger LOG = LoggerFactory.getLogger(KafkaHelpers.class);
+  private static final String JAVA_AUTH_LOGIN_CONFIG = "java.security.auth.login.config";
 
   // This class cannot be instantiated
   private KafkaHelpers() {
@@ -91,7 +104,7 @@ public final class KafkaHelpers {
     if (principal != null && keytabLocation != null) {
       LOG.debug("Adding Kerberos login conf to Kafka for principal {} and keytab {}",
                 principal, keytabLocation);
-      conf.put(SaslConfigs.SASL_JAAS_CONFIG, String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
+      conf.put("java.security.auth.login.config", String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
                                                    "        useKeyTab=true \n" +
                                                    "        storeKey=true  \n" +
                                                    "        useTicketCache=false  \n" +
@@ -118,6 +131,49 @@ public final class KafkaHelpers {
               "then both the principal and the keytab have " +
               "to be specified. If Kerberos is not enabled, then both should be empty.";
       throw new IllegalArgumentException(message);
+    }
+  }
+
+  /**
+   * Sets up a JAAS conf for Kafka client login with the given Kerberos principal and keytab
+   *
+   * @param principal Kerberos principal
+   * @param keytabLocation Kerberos keytab for the principal
+   * @throws IOException on any exception while writing the JAAS config file
+   */
+  public static void setupOldKerberosLogin(@Nullable String principal,
+                                           @Nullable String keytabLocation) throws IOException {
+    if (principal != null && keytabLocation != null) {
+      Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rw-------");
+      FileAttribute<Set<PosixFilePermission>> fileAttributes = PosixFilePermissions.asFileAttribute(permissions);
+
+      Path jaasConfFile = Files.createTempFile("kafka-client-jaas", "conf", fileAttributes);
+
+      List<String> jassConfLines = ImmutableList.of(
+        "KafkaClient { ",
+        "com.sun.security.auth.module.Krb5LoginModule required ",
+        "useKeyTab=true ",
+        "storeKey=true ",
+        "useTicketCache=false ",
+        String.format("keyTab=\"%s\" ", keytabLocation),
+        String.format("principal=\"%s\"; ", principal),
+        "}; "
+      );
+
+      Files.write(jaasConfFile, jassConfLines, Charsets.UTF_8);
+      System.setProperty(JAVA_AUTH_LOGIN_CONFIG, jaasConfFile.toAbsolutePath().toString());
+      // Reset the configuration so that the new file gets loaded
+      Configuration.setConfiguration(null);
+
+      // TODO: change to debug
+      if (LOG.isInfoEnabled()) {
+        byte[] bytes = Files.readAllBytes(jaasConfFile.toAbsolutePath());
+        LOG.info("Wrote JAAS login conf to file {}:\n{}", jaasConfFile.toAbsolutePath(),
+                 new String(bytes, Charsets.UTF_8));
+      }
+    } else {
+      LOG.debug("Not setting up Kerberos login conf since either the principal {} or the keytab {} is null",
+                principal, keytabLocation);
     }
   }
 }

@@ -33,9 +33,11 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import kafka.api.OffsetRequest;
+import kafka.common.TopicAndPartition;
+import kafka.message.MessageAndMetadata;
+import kafka.serializer.DefaultDecoder;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -45,15 +47,12 @@ import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
-import org.apache.spark.streaming.kafka010.ConsumerStrategies;
-import org.apache.spark.streaming.kafka010.KafkaUtils;
-import org.apache.spark.streaming.kafka010.LocationStrategies;
+import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -98,7 +97,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     kafkaParams.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     kafkaParams.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
     kafkaParams.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
-    KafkaHelpers.setupKerberosLogin(kafkaParams, conf.getPrincipal(), conf.getKeytabLocation());
+    KafkaHelpers.setupOldKerberosLogin(conf.getPrincipal(), conf.getKeytabLocation());
     // Create a unique string for the group.id using the pipeline name and the topic.
     // group.id is a Kafka consumer property that uniquely identifies the group of
     // consumer processes to which this consumer belongs.
@@ -141,10 +140,17 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
       }
       LOG.info("Using initial offsets {}", offsets);
 
+      Map<TopicAndPartition, Long> oldOffsets = convertOffsetsToOldFormat(offsets);
+      Map<String, String> oldKafkaParams = convertParamsToOldFormat(kafkaParams);
       return KafkaUtils.createDirectStream(
-        context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
-        ConsumerStrategies.<byte[], byte[]>Subscribe(Collections.singleton(conf.getTopic()), kafkaParams, offsets)
-      ).transform(new RecordTransform(conf));
+        context.getSparkStreamingContext(), byte[].class, byte[].class, DefaultDecoder.class, DefaultDecoder.class,
+        MessageAndMetadata.class, oldKafkaParams, oldOffsets,
+        new Function<MessageAndMetadata<byte[], byte[]>, MessageAndMetadata>() {
+          @Override
+          public MessageAndMetadata call(MessageAndMetadata<byte[], byte[]> in) throws Exception {
+            return in;
+          }
+        }).transform(new RecordTransform(conf));
     }
   }
 
@@ -161,11 +167,27 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     return partitions;
   }
 
+  private Map<TopicAndPartition, Long> convertOffsetsToOldFormat(Map<TopicPartition, Long> offsets) {
+    Map<TopicAndPartition, Long> oldFormat = new HashMap<>();
+    for (Map.Entry<TopicPartition, Long> entry : offsets.entrySet()) {
+      oldFormat.put(new TopicAndPartition(entry.getKey().topic(), entry.getKey().partition()), entry.getValue());
+    }
+    return oldFormat;
+  }
+
+  private Map<String, String> convertParamsToOldFormat(Map<String, Object> kafkaParmas) {
+    Map<String, String> oldFormat = new HashMap<>();
+    for (Map.Entry<String, Object> entry : kafkaParmas.entrySet()) {
+      oldFormat.put(entry.getKey(), entry.getValue().toString());
+    }
+    return oldFormat;
+  }
+
   /**
    * Applies the format function to each rdd.
    */
   private static class RecordTransform
-    implements Function2<JavaRDD<ConsumerRecord<byte[], byte[]>>, Time, JavaRDD<StructuredRecord>> {
+    implements Function2<JavaRDD<MessageAndMetadata>, Time, JavaRDD<StructuredRecord>> {
 
     private final KafkaConfig conf;
 
@@ -174,8 +196,8 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     }
 
     @Override
-    public JavaRDD<StructuredRecord> call(JavaRDD<ConsumerRecord<byte[], byte[]>> input, Time batchTime) {
-      Function<ConsumerRecord<byte[], byte[]>, StructuredRecord> recordFunction = conf.getFormat() == null ?
+    public JavaRDD<StructuredRecord> call(JavaRDD<MessageAndMetadata> input, Time batchTime) throws Exception {
+      Function<MessageAndMetadata, StructuredRecord> recordFunction = conf.getFormat() == null ?
         new BytesFunction(batchTime.milliseconds(), conf) : new FormatFunction(batchTime.milliseconds(), conf);
       return input.map(recordFunction);
     }
@@ -185,7 +207,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
    * Common logic for transforming kafka key, message, partition, and offset into a structured record.
    * Everything here should be serializable, as Spark Streaming will serialize all functions.
    */
-  private abstract static class BaseFunction implements Function<ConsumerRecord<byte[], byte[]>, StructuredRecord> {
+  private abstract static class BaseFunction implements Function<MessageAndMetadata, StructuredRecord> {
     private final long ts;
     protected final KafkaConfig conf;
     private transient String messageField;
@@ -201,7 +223,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     }
 
     @Override
-    public StructuredRecord call(ConsumerRecord<byte[], byte[]> in) throws Exception {
+    public StructuredRecord call(MessageAndMetadata in) throws Exception {
       // first time this was called, initialize schema and time, key, and message fields.
       if (schema == null) {
         schema = conf.getSchema();
@@ -231,7 +253,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
       if (offsetField != null) {
         builder.set(offsetField, in.offset());
       }
-      addMessage(builder, messageField, in.value());
+      addMessage(builder, messageField, (byte[]) in.message());
       return builder.build();
     }
 

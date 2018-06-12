@@ -43,10 +43,10 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Kafka sink to write to Kafka
@@ -206,7 +206,10 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
       conf.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
       conf.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
 
-      KafkaHelpers.setupKerberosLogin(conf, kafkaSinkConfig.principal, kafkaSinkConfig.keytabLocation);
+      if (kafkaSinkConfig.principal != null && kafkaSinkConfig.keytabLocation != null) {
+        conf.put(KafkaHelpers.KRB_PRINCIPAL, kafkaSinkConfig.principal);
+        conf.put(KafkaHelpers.KRB_KEYTAB, kafkaSinkConfig.keytabLocation);
+      }
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
 
       conf.put("async", kafkaSinkConfig.async);

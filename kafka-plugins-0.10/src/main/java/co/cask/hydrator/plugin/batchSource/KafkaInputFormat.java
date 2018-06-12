@@ -41,6 +41,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,7 +61,10 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   private static final Type LIST_TYPE = new TypeToken<List<KafkaRequest>>() { }.getType();
 
   @Override
-  public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context) {
+  public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context)
+    throws IOException {
+    Configuration conf = context.getConfiguration();
+    KafkaHelpers.setupOldKerberosLogin(conf.get(KafkaHelpers.KRB_PRINCIPAL), conf.get(KafkaHelpers.KRB_KEYTAB));
     return new KafkaRecordReader();
   }
 

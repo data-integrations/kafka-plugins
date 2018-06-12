@@ -50,7 +50,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,6 +57,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 /**
  * Kafka batch source.
  */
@@ -429,7 +429,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
     // We save offsets in datasets, no need for Kafka to save them
     kafkaConf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-    KafkaHelpers.setupKerberosLogin(kafkaConf, config.getPrincipal(), config.getKeytabLocation());
+    KafkaHelpers.setupOldKerberosLogin(config.getPrincipal(), config.getKeytabLocation());
+    if (config.getPrincipal() != null && config.getKeytabLocation() != null) {
+      conf.set(KafkaHelpers.KRB_PRINCIPAL, config.getPrincipal());
+      conf.set(KafkaHelpers.KRB_KEYTAB, config.getKeytabLocation());
+    }
     kafkaConf.putAll(config.getKafkaProperties());
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
