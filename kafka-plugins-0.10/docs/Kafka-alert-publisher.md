@@ -4,7 +4,7 @@
 
 Kafka Alert Publisher that allows you to publish alerts to kafka as json objects. The plugin internally uses kafka producer apis to publish alerts. 
 The plugin allows to specify kafka topic to use for publishing and other additional kafka producer properties. 
-This plugin uses kafka 0.8.2 java apis.
+This plugin uses kafka 0.10.2 java apis.
 
 Build
 -----
@@ -45,7 +45,7 @@ CDAP IRC Channel: #cdap on irc.freenode.net
 
 ## License and Trademarks
 
-Copyright © 2017 Cask Data, Inc.
+Copyright © 2018 Cask Data, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at

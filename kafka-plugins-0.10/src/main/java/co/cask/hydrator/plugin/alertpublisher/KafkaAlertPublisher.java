@@ -27,21 +27,22 @@ import co.cask.cdap.etl.api.AlertPublisher;
 import co.cask.cdap.etl.api.AlertPublisherContext;
 import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.hydrator.common.KeyValueListParser;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
-import kafka.common.InvalidTopicException;
 import kafka.common.Topic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.InvalidTopicException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import javax.annotation.Nullable;
 
 /**
  * Kafka Alert Publisher
@@ -127,6 +128,16 @@ public class KafkaAlertPublisher extends AlertPublisher {
     @Description("Additional kafka producer properties to set.")
     private String producerProperties;
 
+    @Description("The kerberos principal used for the source when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String principal;
+
+    @Description("The keytab location for the kerberos principal when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String keytabLocation;
+
     public Config(String brokers, String topic, String producerProperties) {
       this.brokers = brokers;
       this.topic = topic;
@@ -159,6 +170,8 @@ public class KafkaAlertPublisher extends AlertPublisher {
         throw new IllegalArgumentException(String.format("Topic name %s is not a valid kafka topic. Please provide " +
                                                            "valid kafka topic name. %s", topic, e.getMessage()));
       }
+
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
     }
   }
 }

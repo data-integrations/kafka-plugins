@@ -33,9 +33,9 @@ import co.cask.cdap.format.StructuredRecordStringConverter;
 import co.cask.hydrator.common.KeyValueListParser;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.apache.avro.reflect.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -43,6 +43,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +54,8 @@ import java.util.Map;
 @Plugin(type = BatchSink.PLUGIN_TYPE)
 @Name("Kafka")
 @Description("KafkaSink to write events to kafka")
-public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
-  private static final Logger LOG = LoggerFactory.getLogger(Kafka.class);
+public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaBatchSink.class);
 
   // Configuration for the plugin.
   private final Config producerConfig;
@@ -64,7 +65,7 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   // Static constants for configuring Kafka producer.
   private static final String ACKS_REQUIRED = "acks";
 
-  public Kafka(Config producerConfig) {
+  public KafkaBatchSink(Config producerConfig) {
     super(producerConfig);
     this.producerConfig = producerConfig;
     this.kafkaOutputFormatProvider = new KafkaOutputFormatProvider(producerConfig);
@@ -74,9 +75,7 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     super.configurePipeline(pipelineConfigurer);
 
-    if (!producerConfig.async.equalsIgnoreCase("true") && !producerConfig.async.equalsIgnoreCase("false")) {
-      throw new IllegalArgumentException("Async flag has to be either TRUE or FALSE.");
-    }
+    producerConfig.validate();
   }
 
   @Override
@@ -159,6 +158,16 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
     @Nullable
     private String kafkaProperties;
 
+    @Description("The kerberos principal used for the source.")
+    @Macro
+    @Nullable
+    private String principal;
+
+    @Description("The keytab location for the kerberos principal when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String keytabLocation;
+
     @Name("compressionType")
     @Description("Compression type to be applied on message")
     @Macro
@@ -175,6 +184,14 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
       this.kafkaProperties = kafkaProperties;
       this.compressionType = compressionType;
     }
+
+    private void validate() {
+      if (!async.equalsIgnoreCase("true") && !async.equalsIgnoreCase("false")) {
+        throw new IllegalArgumentException("Async flag has to be either TRUE or FALSE.");
+      }
+
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
+    }
   }
 
   private static class KafkaOutputFormatProvider implements OutputFormatProvider {
@@ -189,6 +206,7 @@ public class Kafka extends ReferenceBatchSink<StructuredRecord, Text, Text> {
       conf.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
       conf.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
 
+      KafkaHelpers.setupKerberosLogin(conf, kafkaSinkConfig.principal, kafkaSinkConfig.keytabLocation);
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
 
       conf.put("async", kafkaSinkConfig.async);
