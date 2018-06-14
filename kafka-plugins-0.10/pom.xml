@@ -9,15 +9,15 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <name>Apache Kafka 0.8 plugins</name>
+  <name>Apache Kafka 0.10 plugins</name>
   <artifactId>kafka-plugins</artifactId>
-  <version>1.8.2-SNAPSHOT-0.8.2.2</version>
+  <version>1.8.2-SNAPSHOT-0.10.2.0</version>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.10</artifactId>
-      <version>${kafka8.version}</version>
+      <artifactId>kafka_2.11</artifactId>
+      <version>${kafka10.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.slf4j</groupId>
@@ -27,25 +27,41 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming-kafka_2.10</artifactId>
-      <version>${spark1.version}</version>
+      <artifactId>spark-streaming-kafka-0-10_2.11</artifactId>
+      <version>${spark2.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka_2.11</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-tags_2.11</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-mllib_2.10</artifactId>
-      <version>${spark1.version}</version>
+      <artifactId>spark-mllib_2.11</artifactId>
+      <version>${spark2.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.xbean</groupId>
+          <artifactId>xbean-asm5-shaded</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-streaming_2.11</artifactId>
+      <version>${spark2.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming_2.10</artifactId>
-      <version>${spark1.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.10</artifactId>
-      <version>${spark1.version}</version>
+      <artifactId>spark-core_2.11</artifactId>
+      <version>${spark2.version}</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -89,26 +105,26 @@
           <artifactId>jets3t</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>asm</groupId>
-          <artifactId>asm</artifactId>
+          <groupId>org.apache.xbean</groupId>
+          <artifactId>xbean-asm5-shaded</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-spark-core</artifactId>
+      <artifactId>cdap-spark-core2_2.11</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-data-pipeline</artifactId>
+      <artifactId>cdap-data-pipeline2_2.11</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-data-streams</artifactId>
+      <artifactId>cdap-data-streams2_2.11</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
@@ -122,8 +138,8 @@
         <version>3.3.0</version>
         <configuration>
           <instructions>
-            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
-              kafka.serializer.*;kafka.common;com.google.common.base.*;</_exportcontents>
+            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka010.*;
+              org.apache.kafka.*;com.google.common.base.*;</_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
             <Embed-Directory>lib</Embed-Directory>

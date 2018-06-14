@@ -5,7 +5,7 @@ Description
 -----------
 Kafka batch source. Emits the record from kafka. It will emit a record based on the schema and format 
 you use, or if no schema or format is specified, the message payload will be emitted. The source will 
-remember the offset it read last run and continue from that offset for the next run.
+remember the offset it read last run and continue from that offset for the next run. This plugin uses kafka 0.8.2 java apis.
 
 Use Case
 --------
@@ -94,4 +94,3 @@ For each Kafka message read, it will output a record with the schema:
     | count       | int              |
     | price       | double           |
     +================================+
-    

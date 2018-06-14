@@ -5,7 +5,7 @@ Description
 -----------
 Kafka streaming source. Emits a record with the schema specified by the user. If no schema
 is specified, it will emit a record with two fields: 'key' (nullable string) and 'message'
-(bytes). This plugin uses kafka 0.8.2 java apis.
+(bytes). This plugin uses kafka 0.10.2 java apis.
 
 
 Use Case
@@ -64,6 +64,9 @@ If set, this field must be present in the schema property and must be a long.
 
 **maxRatePerPartition:** Maximum number of records to read per second per partition. Defaults to 1000.
 
+**principal** The kerberos principal used for the source when kerberos security is enabled for kafka.
+
+**keytabLocation** The keytab location for the kerberos principal when kerberos security is enabled for kafka.
 
 Example
 -------
