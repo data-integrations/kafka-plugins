@@ -31,7 +31,7 @@
       <version>${spark2.version}</version>
       <exclusions>
         <exclusion>
-          <groupId>>org.apache.hadoop</groupId>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client</artifactId>
         </exclusion>
         <exclusion>
@@ -59,7 +59,7 @@
           <artifactId>xbean-asm5-shaded</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>>org.apache.hadoop</groupId>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client</artifactId>
         </exclusion>
       </exclusions>
@@ -75,7 +75,7 @@
           <artifactId>spark-core_2.10</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>>org.apache.hadoop</groupId>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client</artifactId>
         </exclusion>
       </exclusions>
@@ -170,8 +170,9 @@
         <version>3.3.0</version>
         <configuration>
           <instructions>
-            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka010.*;
-              org.apache.kafka.*;com.google.common.base.*;</_exportcontents>
+            <_exportcontents>co.cask.hydrator.plugin.*;org.apache.spark.streaming.kafka.*;
+              kafka.serializer.*;kafka.common;org.apache.kafka.*;kafka.message.*;
+              com.google.common.base.*;</_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
             <Embed-Directory>lib</Embed-Directory>
