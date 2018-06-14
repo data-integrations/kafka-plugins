@@ -16,6 +16,7 @@
 
 package co.cask.hydrator.plugin.sink;
 
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -26,7 +27,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.config.SaslConfigs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,8 +116,8 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
     }
 
     // Add Kerberos login information if any
-    if (!Strings.isNullOrEmpty(configuration.get(SaslConfigs.SASL_JAAS_CONFIG))) {
-      props.put(SaslConfigs.SASL_JAAS_CONFIG, configuration.get(SaslConfigs.SASL_JAAS_CONFIG));
+    if (!Strings.isNullOrEmpty(configuration.get(KafkaHelpers.SASL_JAAS_CONFIG))) {
+      props.put(KafkaHelpers.SASL_JAAS_CONFIG, configuration.get(KafkaHelpers.SASL_JAAS_CONFIG));
     }
 
     // CDAP-9178: cached the producer object to avoid being created on every batch interval

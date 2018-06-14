@@ -19,20 +19,20 @@ package co.cask.hydrator.plugin.common;
 import com.google.common.base.Strings;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.config.SaslConfigs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Utility class for Kafka operations
  */
 public final class KafkaHelpers {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaHelpers.class);
+  public static final String SASL_JAAS_CONFIG = "sasl.jaas.config";
 
   // This class cannot be instantiated
   private KafkaHelpers() {
@@ -91,7 +91,7 @@ public final class KafkaHelpers {
     if (principal != null && keytabLocation != null) {
       LOG.debug("Adding Kerberos login conf to Kafka for principal {} and keytab {}",
                 principal, keytabLocation);
-      conf.put(SaslConfigs.SASL_JAAS_CONFIG, String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
+      conf.put(SASL_JAAS_CONFIG, String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
                                                    "        useKeyTab=true \n" +
                                                    "        storeKey=true  \n" +
                                                    "        useTicketCache=false  \n" +
