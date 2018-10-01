@@ -112,6 +112,16 @@
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>co.cask.http</groupId>
+      <artifactId>netty-http</artifactId>
+      <version>${netty-http.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
