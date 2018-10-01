@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
@@ -47,6 +48,7 @@ import co.cask.cdap.etl.api.batch.BatchSource;
 import co.cask.cdap.etl.api.batch.BatchSourceContext;
 import co.cask.cdap.format.RecordFormats;
 import co.cask.hydrator.common.KeyValueListParser;
+import co.cask.hydrator.common.LineageRecorder;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
@@ -377,6 +379,15 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), config.getBrokerMap(),
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        table);
+    LineageRecorder lineageRecorder = new LineageRecorder(context, config.referenceName);
+    Schema schema = config.getSchema();
+    if (schema != null) {
+      lineageRecorder.createExternalDataset(schema);
+      if (schema.getFields() != null && !schema.getFields().isEmpty()) {
+        lineageRecorder.recordRead("Read", "Read from Kafka topic.",
+                                   schema.getFields().stream().map(Schema.Field::getName).collect(Collectors.toList()));
+      }
+    }
     context.setInput(Input.of(config.referenceName,
                               new SourceInputFormatProvider(KafkaInputFormat.class, conf)));
   }

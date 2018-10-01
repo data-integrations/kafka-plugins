@@ -31,6 +31,7 @@ import co.cask.cdap.etl.api.batch.BatchSink;
 import co.cask.cdap.etl.api.batch.BatchSinkContext;
 import co.cask.cdap.format.StructuredRecordStringConverter;
 import co.cask.hydrator.common.KeyValueListParser;
+import co.cask.hydrator.common.LineageRecorder;
 import co.cask.hydrator.common.ReferenceBatchSink;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.plugin.common.KafkaHelpers;
@@ -43,10 +44,11 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Kafka sink to write to Kafka
@@ -80,6 +82,15 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
 
   @Override
   public void prepareRun(BatchSinkContext context) throws Exception {
+    LineageRecorder lineageRecorder = new LineageRecorder(context, producerConfig.referenceName);
+    Schema inputSchema = context.getInputSchema();
+    if (inputSchema != null) {
+      lineageRecorder.createExternalDataset(inputSchema);
+      if (inputSchema.getFields() != null && !inputSchema.getFields().isEmpty()) {
+        lineageRecorder.recordWrite("Write", "Wrote to Kafka topic.", inputSchema.getFields().stream().map
+          (Schema.Field::getName).collect(Collectors.toList()));
+      }
+    }
     context.addOutput(Output.of(producerConfig.referenceName, kafkaOutputFormatProvider));
   }
 
