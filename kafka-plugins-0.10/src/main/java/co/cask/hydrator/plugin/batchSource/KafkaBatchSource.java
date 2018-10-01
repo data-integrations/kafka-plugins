@@ -38,6 +38,7 @@ import co.cask.cdap.etl.api.batch.BatchSource;
 import co.cask.cdap.etl.api.batch.BatchSourceContext;
 import co.cask.cdap.format.RecordFormats;
 import co.cask.hydrator.common.KeyValueListParser;
+import co.cask.hydrator.common.LineageRecorder;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
@@ -50,7 +51,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,6 +58,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
+
 /**
  * Kafka batch source.
  */
@@ -233,6 +236,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return Strings.isNullOrEmpty(format) ? null : format;
     }
 
+    @Nullable
     public Schema getSchema() {
       try {
         return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
@@ -434,6 +438,15 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
                                                        config.getMaxNumberRecords(), table);
+    LineageRecorder lineageRecorder = new LineageRecorder(context, config.referenceName);
+    Schema schema = config.getSchema();
+    if (schema != null) {
+      lineageRecorder.createExternalDataset(schema);
+      if (schema.getFields() != null && !schema.getFields().isEmpty()) {
+        lineageRecorder.recordRead("Read", "Read from Kafka topic.",
+                                   schema.getFields().stream().map(Schema.Field::getName).collect(Collectors.toList()));
+      }
+    }
     context.setInput(Input.of(config.referenceName,
                               new SourceInputFormatProvider(KafkaInputFormat.class, conf)));
   }
