@@ -38,11 +38,4 @@
   <suppress checks=".*" files=".*[/\\]src[/\\](main)[/\\](thrift)[/\\].*" />
   <suppress checks=".*" files=".*[/\\]src[/\\](main)[/\\](java)[/\\](co|org)[/\\](cask|apache)[/\\](tephra|thrift)[/\\].*" />
 
-  <!--
-    The is to suppress the wrongly named package co.cask.hydrator.plugin.batchSource, which shouldn't have upper case.
-    However, the package name cannot be changed, otherwise it breaks existing pipeline.
-    TODO: CDAP-14447 Remove the following suppression
-  -->
-  <suppress checks="PackageName" files=".*[/\\]src[/\\]main[/\\]java[/\\]co[/\\]cask[/\\]hydrator[/\\]plugin[/\\]batchSource.*" />
-
 </suppressions>

@@ -14,7 +14,7 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
+package co.cask.hydrator.plugin.batch.source;
 
 import kafka.api.PartitionOffsetRequestInfo;
 import kafka.common.TopicAndPartition;
