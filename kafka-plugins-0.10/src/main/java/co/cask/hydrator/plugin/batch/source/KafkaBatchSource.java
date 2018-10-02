@@ -97,14 +97,17 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     private String tableName;
 
-    @Description("The topic partitions to read from. If not specified, all partitions will be read.")
+    @Description("A comma separated list of topic partitions to read from. " +
+      "If not specified, all partitions will be read.")
     @Macro
     @Nullable
     private String partitions;
 
-    @Description("The initial offset for each topic partition. This offset will only be used for the" +
-      "first run of the pipeline. Any subsequent run will read from the latest offset from previous run." +
-      "Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read.")
+    @Description("The initial offset for each topic partition in partition1:offset1,partition2:offset2 form. " +
+      "These offsets will only be used for the first run of the pipeline. " +
+      "Any subsequent run will read from the latest offset from previous run." +
+      "Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. " +
+      "If not specified, the initial run will start reading from the latest message in Kafka.")
     @Nullable
     @Macro
     private String initialPartitionOffsets;
@@ -295,7 +298,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
       if (getOffsetField() != null && !offsetFieldExists) {
         throw new IllegalArgumentException(String.format(
-          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetFieldExists));
+          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetField));
       }
       return Schema.recordOf("kafka.message", messageFields);
     }
@@ -374,13 +377,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       if (Strings.isNullOrEmpty(format)) {
         List<Schema.Field> messageFields = messageSchema.getFields();
         if (messageFields.size() > 1) {
-          List<String> fieldNames = new ArrayList<>();
-          for (Schema.Field messageField : messageFields) {
-            fieldNames.add(messageField.getName());
-          }
+          String fieldNames = messageFields.stream().map(Schema.Field::getName).collect(Collectors.joining(","));
+
           throw new IllegalArgumentException(String.format(
             "Without a format, the schema must contain just a single message field of type bytes or nullable bytes. " +
-              "Found %s message fields (%s).", messageFields.size(), Joiner.on(',').join(fieldNames)));
+              "Found %s message fields (%s).", messageFields.size(), fieldNames));
         }
 
         Schema.Field messageField = messageFields.get(0);
@@ -394,7 +395,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         }
       } else {
         // otherwise, if there is a format, make sure we can instantiate it.
-        FormatSpecification formatSpec = new FormatSpecification(format, messageSchema, new HashMap<String, String>());
+        FormatSpecification formatSpec = new FormatSpecification(format, messageSchema, new HashMap<>());
 
         try {
           RecordFormats.createInitializedFormat(formatSpec);
@@ -480,14 +481,13 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
     if (config.getFormat() != null) {
-      FormatSpecification spec =
-        new FormatSpecification(config.getFormat(), messageSchema, new HashMap<String, String>());
+      FormatSpecification spec = new FormatSpecification(config.getFormat(), messageSchema, new HashMap<>());
       recordFormat = RecordFormats.createInitializedFormat(spec);
     }
   }
 
   @Override
-  public void transform(KeyValue<KafkaKey, KafkaMessage> input, Emitter<StructuredRecord> emitter) throws Exception {
+  public void transform(KeyValue<KafkaKey, KafkaMessage> input, Emitter<StructuredRecord> emitter) {
     StructuredRecord.Builder builder = StructuredRecord.builder(schema);
     if (config.getKeyField() != null) {
       builder.set(config.getKeyField(), input.getValue().getKey().array());
