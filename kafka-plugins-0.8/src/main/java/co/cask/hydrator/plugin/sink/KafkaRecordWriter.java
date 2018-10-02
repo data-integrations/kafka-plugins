@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Record writer to write events to kafka
@@ -37,14 +38,6 @@ public class KafkaRecordWriter extends RecordWriter<Text, Text> {
   public KafkaRecordWriter(KafkaProducer<String, String> producer, String topic) {
     this.producer = producer;
     this.topic = topic;
-  }
-
-  protected void sendMessage(final String key, final String body) {
-    try {
-      producer.send(new ProducerRecord<>(topic, key, body)).get();
-    } catch (Exception e) {
-      LOG.error("Exception while sending data to kafka topic {}, key {}, message {}, e", topic, key, body, e);
-    }
   }
 
   @Override
@@ -60,6 +53,14 @@ public class KafkaRecordWriter extends RecordWriter<Text, Text> {
   public void close(TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
     if (producer != null) {
       producer.close();
+    }
+  }
+
+  private void sendMessage(final String key, final String body) throws IOException, InterruptedException {
+    try {
+      producer.send(new ProducerRecord<>(topic, key, body)).get();
+    } catch (ExecutionException e) {
+      throw new IOException(e.getCause());
     }
   }
 }

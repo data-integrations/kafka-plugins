@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -85,6 +86,16 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                               long maxNumberRecords, KeyValueTable table) {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
+    // change the request timeout to fetch the metadata to be 15 seconds or 1 second greater than session time out ms,
+    // since this config has to be greater than the session time out, which is by default 10 seconds
+    // the KafkaConsumer at runtime should still use the default timeout 305 seconds or whataver the user provides in
+    // kafkaConf
+    int requestTimeout = 15 * 1000;
+    if (kafkaConf.containsKey(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG)) {
+      requestTimeout = Math.max(requestTimeout,
+                                Integer.valueOf(kafkaConf.get(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG) + 1000));
+    }
+    properties.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, requestTimeout);
     try (Consumer<byte[], byte[]> consumer =
            new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
       // Get Metadata for all topics
