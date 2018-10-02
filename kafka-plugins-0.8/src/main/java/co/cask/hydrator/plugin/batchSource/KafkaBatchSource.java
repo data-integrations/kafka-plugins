@@ -16,16 +16,6 @@
 
 package co.cask.hydrator.plugin.batchSource;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
 import co.cask.cdap.api.annotation.Name;
@@ -58,6 +48,16 @@ import com.google.common.base.Strings;
 import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Kafka batch source.
@@ -206,8 +206,10 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
 
-    // gets the message schema from the schema field. If the time, key, partition, or offset fields are in the configured
-    // schema, they will be removed.
+    /**
+     * Gets the message schema from the schema field. If the time, key, partition,
+     * or offset fields are in the configured schema, they will be removed.
+     */
     public Schema getMessageSchema() {
       Schema schema = getSchema();
       List<Schema.Field> messageFields = new ArrayList<>();
@@ -218,9 +220,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       for (Schema.Field field : schema.getFields()) {
         String fieldName = field.getName();
         Schema fieldSchema = field.getSchema();
-        Schema.Type fieldType = fieldSchema.isNullable() ? fieldSchema.getNonNullable().getType() : fieldSchema.getType();
+        Schema.Type fieldType = fieldSchema.isNullable()
+          ? fieldSchema.getNonNullable().getType()
+          : fieldSchema.getType();
         // if the field is not the time field and not the key field, it is a message field.
-       if (fieldName.equals(keyField)) {
+        if (fieldName.equals(keyField)) {
           if (fieldType != Schema.Type.BYTES) {
             throw new IllegalArgumentException("The key field must be of type bytes or nullable bytes.");
           }

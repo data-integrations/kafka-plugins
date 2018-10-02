@@ -19,11 +19,9 @@ package co.cask.hydrator.plugin.batchSource;
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
 import co.cask.hydrator.plugin.common.KafkaHelpers;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import kafka.common.TopicAndPartition;
@@ -49,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -126,14 +125,9 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                                         List<PartitionInfo> partitionInfos,
                                                         Map<TopicAndPartition, Long> offsets,
                                                         long maxNumberRecords, KeyValueTable table) {
-    List<TopicPartition> topicPartitions =
-      Lists.transform(partitionInfos,
-                      new Function<PartitionInfo, TopicPartition>() {
-                            @Override
-                            public TopicPartition apply(PartitionInfo input) {
-                              return new TopicPartition(input.topic(), input.partition());
-                            }
-                          });
+    List<TopicPartition> topicPartitions = partitionInfos.stream()
+      .map(info -> new TopicPartition(info.topic(), info.partition()))
+      .collect(Collectors.toList());
     Map<TopicPartition, Long> latestOffsets = KafkaHelpers.getLatestOffsets(consumer, topicPartitions);
     Map<TopicPartition, Long> earliestOffsets = KafkaHelpers.getEarliestOffsets(consumer, topicPartitions);
 

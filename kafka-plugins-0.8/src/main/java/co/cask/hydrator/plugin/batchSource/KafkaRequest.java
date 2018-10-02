@@ -119,9 +119,9 @@ public class KafkaRequest {
   }
 
   public long getLastOffset() {
-    if (this.latestOffset == -1 && uri != null)
+    if (this.latestOffset == -1 && uri != null) {
       return getLastOffset(kafka.api.OffsetRequest.LatestTime());
-    else {
+    } else {
       return this.latestOffset;
     }
   }

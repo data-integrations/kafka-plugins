@@ -245,8 +245,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
 
-    // gets the message schema from the schema field. If the time, key, partition, or offset fields are in the configured
-    // schema, they will be removed.
+    /** Gets the message schema from the schema field.
+     * If the time, key, partition, or offset fields are in the configured schema, they will be removed.
+     */
     public Schema getMessageSchema() {
       Schema schema = getSchema();
       List<Schema.Field> messageFields = new ArrayList<>();
@@ -257,9 +258,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       for (Schema.Field field : schema.getFields()) {
         String fieldName = field.getName();
         Schema fieldSchema = field.getSchema();
-        Schema.Type fieldType = fieldSchema.isNullable() ? fieldSchema.getNonNullable().getType() : fieldSchema.getType();
+        Schema.Type fieldType = fieldSchema.isNullable()
+          ? fieldSchema.getNonNullable().getType()
+          : fieldSchema.getType();
         // if the field is not the time field and not the key field, it is a message field.
-       if (fieldName.equals(keyField)) {
+        if (fieldName.equals(keyField)) {
           if (fieldType != Schema.Type.BYTES) {
             throw new IllegalArgumentException("The key field must be of type bytes or nullable bytes.");
           }
