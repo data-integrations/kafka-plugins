@@ -17,6 +17,7 @@
 package co.cask.hydrator.plugin.batch.source;
 
 import java.net.URI;
+import java.util.Objects;
 
 
 /**
@@ -39,5 +40,22 @@ public class LeaderInfo {
 
   public URI getUri() {
     return uri;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LeaderInfo that = (LeaderInfo) o;
+    return leaderId == that.leaderId && Objects.equals(uri, that.uri);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(uri, leaderId);
   }
 }
