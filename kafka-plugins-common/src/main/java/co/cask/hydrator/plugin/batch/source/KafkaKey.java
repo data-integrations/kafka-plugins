@@ -1,5 +1,5 @@
 /*
- * Copyright © 2017 Cask Data, Inc.
+ * Copyright © 2017-2018 Cask Data, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -16,11 +16,6 @@
 
 package co.cask.hydrator.plugin.batch.source;
 
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
@@ -34,46 +29,31 @@ import java.io.IOException;
  */
 public class KafkaKey implements WritableComparable<KafkaKey> {
 
-  private String leaderId = "";
-  private int partition = 0;
-  private long beginOffset = 0;
-  private long offset = 0;
-  private long checksum = 0;
-  private String topic = "";
-  private MapWritable partitionMap = new MapWritable();
+  private String topic;
+  private int partition;
+  private long beginOffset;
+  private long offset;
+  private long messageSize;
+  private long checksum;
 
   /**
    * dummy empty constructor
    */
   public KafkaKey() {
-    this("dummy", "0", 0, 0, 0, 0);
+    this("dummy", 0, 0, 0, 0);
   }
 
-  public KafkaKey(String topic, String leaderId, int partition, long beginOffset, long offset) {
-    this(topic, leaderId, partition, beginOffset, offset, 0);
-  }
-
-  public KafkaKey(String topic, String leaderId, int partition, long beginOffset, long offset, long checksum) {
-    this.set(topic, leaderId, partition, beginOffset, offset, checksum);
-  }
-
-  public void set(String topic, String leaderId, int partition, long beginOffset, long offset, long checksum) {
-    this.leaderId = leaderId;
+  public KafkaKey(String topic, int partition, long beginOffset, long offset, long checksum) {
+    this.topic = topic;
     this.partition = partition;
+    set(beginOffset, offset, 1024L, checksum);
+  }
+
+  public void set(long beginOffset, long offset, long messageSize, long checksum) {
     this.beginOffset = beginOffset;
     this.offset = offset;
+    this.messageSize = messageSize;
     this.checksum = checksum;
-    this.topic = topic;
-  }
-
-  public void clear() {
-    leaderId = "";
-    partition = 0;
-    beginOffset = 0;
-    offset = 0;
-    checksum = 0;
-    topic = "";
-    partitionMap = new MapWritable();
   }
 
   public String getTopic() {
@@ -89,44 +69,27 @@ public class KafkaKey implements WritableComparable<KafkaKey> {
   }
 
   public long getMessageSize() {
-    Text key = new Text("message.size");
-    if (this.partitionMap.containsKey(key)) {
-      return ((LongWritable) this.partitionMap.get(key)).get();
-    } else {
-      return 1024; //default estimated size
-    }
-  }
-
-  public void setMessageSize(long messageSize) {
-    Text key = new Text("message.size");
-    put(key, new LongWritable(messageSize));
-  }
-
-  public void put(Writable key, Writable value) {
-    this.partitionMap.put(key, value);
+    return messageSize;
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    this.leaderId = in.readUTF();
+    this.topic = in.readUTF();
     this.partition = in.readInt();
     this.beginOffset = in.readLong();
     this.offset = in.readLong();
+    this.messageSize = in.readLong();
     this.checksum = in.readLong();
-    this.topic = in.readUTF();
-    this.partitionMap = new MapWritable();
-    this.partitionMap.readFields(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, this.leaderId);
+    out.writeUTF(this.topic);
     out.writeInt(this.partition);
     out.writeLong(this.beginOffset);
     out.writeLong(this.offset);
+    out.writeLong(this.messageSize);
     out.writeLong(this.checksum);
-    out.writeUTF(this.topic);
-    this.partitionMap.write(out);
   }
 
   @Override

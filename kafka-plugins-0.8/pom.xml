@@ -15,6 +15,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>co.cask.hydrator</groupId>
+      <artifactId>kafka-plugins-common</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.10</artifactId>
       <version>${kafka8.version}</version>
@@ -110,6 +115,13 @@
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-data-streams</artifactId>
       <version>${cdap.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>co.cask.hydrator</groupId>
+      <artifactId>kafka-plugins-common</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>

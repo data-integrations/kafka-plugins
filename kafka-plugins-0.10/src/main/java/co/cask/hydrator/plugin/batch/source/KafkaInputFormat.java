@@ -16,15 +16,9 @@
 
 package co.cask.hydrator.plugin.batch.source;
 
-import co.cask.cdap.api.common.Bytes;
-import co.cask.cdap.api.dataset.lib.KeyValueTable;
 import co.cask.hydrator.plugin.common.KafkaHelpers;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -40,9 +34,9 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -61,7 +55,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
 
   @Override
   public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context) {
-    return new KafkaRecordReader();
+    return new KafkaRecordReader(Kafka10Reader::new);
   }
 
 
@@ -79,10 +73,22 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     return kafkaSplits;
   }
 
+  /**
+   * Generates and serializes a list of requests for reading from Kafka to the given {@link Configuration}.
+   *
+   * @param conf the hadoop configuration to update
+   * @param topic the Kafka topic
+   * @param kafkaConf extra Kafka consumer configurations
+   * @param partitions the set of partitions to consume from.
+   *                   If it is empty, it means reading from all available partitions under the given topic.
+   * @param maxNumberRecords maximum number of records to read in one batch per partition
+   * @param partitionOffsets the {@link KafkaPartitionOffsets} containing the starting offset for each partition
+   * @return a {@link List} of {@link KafkaRequest} that get serialized in the hadoop configuration
+   * @throws IOException if failed to setup the {@link KafkaRequest}
+   */
   static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic, Map<String, String> kafkaConf,
-                                              final Set<Integer> partitions,
-                                              Map<TopicAndPartition, Long> initOffsets,
-                                              long maxNumberRecords, KeyValueTable table) {
+                                              Set<Integer> partitions, long maxNumberRecords,
+                                              KafkaPartitionOffsets partitionOffsets) throws IOException {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
     // change the request timeout to fetch the metadata to be 15 seconds or 1 second greater than session time out ms,
@@ -97,68 +103,68 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     properties.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, requestTimeout);
     try (Consumer<byte[], byte[]> consumer =
            new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
-      // Get Metadata for all topics
+      // Get all partitions for the given topic
       List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic);
       if (!partitions.isEmpty()) {
-        Collection<PartitionInfo> filteredPartitionInfos =
-          Collections2.filter(partitionInfos,
-                              new Predicate<PartitionInfo>() {
-                                @Override
-                                public boolean apply(PartitionInfo input) {
-                                  return partitions.contains(input.partition());
-                                }
-                              });
-        partitionInfos = ImmutableList.copyOf(filteredPartitionInfos);
+        // Filter it by the set of desired partitions
+        partitionInfos = partitionInfos.stream()
+          .filter(p -> partitions.contains(p.partition()))
+          .collect(Collectors.toList());
       }
 
       // Get the latest offsets and generate the KafkaRequests
-      List<KafkaRequest> finalRequests = createKafkaRequests(consumer, kafkaConf, partitionInfos, initOffsets,
-                                                             maxNumberRecords, table);
+      List<KafkaRequest> finalRequests = createKafkaRequests(consumer, kafkaConf, partitionInfos,
+                                                             maxNumberRecords, partitionOffsets);
 
       conf.set(KAFKA_REQUEST, new Gson().toJson(finalRequests));
       return finalRequests;
     }
   }
 
+  /**
+   * Creates a list of {@link KafkaRequest} by setting up the start and end offsets for each request. It may
+   * query Kafka using the given {@link Consumer} for the earliest and latest offsets in the given set of partitions.
+   */
   private static List<KafkaRequest> createKafkaRequests(Consumer<byte[], byte[]> consumer,
                                                         Map<String, String> kafkaConf,
                                                         List<PartitionInfo> partitionInfos,
-                                                        Map<TopicAndPartition, Long> offsets,
-                                                        long maxNumberRecords, KeyValueTable table) {
+                                                        long maxNumberRecords,
+                                                        KafkaPartitionOffsets partitionOffsets) throws IOException {
     List<TopicPartition> topicPartitions = partitionInfos.stream()
       .map(info -> new TopicPartition(info.topic(), info.partition()))
       .collect(Collectors.toList());
+
     Map<TopicPartition, Long> latestOffsets = KafkaHelpers.getLatestOffsets(consumer, topicPartitions);
     Map<TopicPartition, Long> earliestOffsets = KafkaHelpers.getEarliestOffsets(consumer, topicPartitions);
 
     List<KafkaRequest> requests = new ArrayList<>();
     for (PartitionInfo partitionInfo : partitionInfos) {
-      TopicAndPartition topicAndPartition = new TopicAndPartition(partitionInfo.topic(), partitionInfo.partition());
-      TopicPartition topicPartition = new TopicPartition(partitionInfo.topic(), partitionInfo.partition());
-      long latestOffset = latestOffsets.get(topicPartition);
-      Long start;
-      byte[] tableStart = table.read(topicAndPartition.toString());
-      if (tableStart != null) {
-        start = Bytes.toLong(tableStart);
-      } else {
-        start = offsets.containsKey(topicAndPartition) ? offsets.get(topicAndPartition) - 1 : null;
+      String topic = partitionInfo.topic();
+      int partition = partitionInfo.partition();
+
+      TopicPartition topicPartition = new TopicPartition(topic, partition);
+
+      long startOffset = partitionOffsets.getPartitionOffset(partitionInfo.partition(),
+                                                             earliestOffsets.getOrDefault(topicPartition, -1L));
+      long endOffset = latestOffsets.get(topicPartition);
+      // StartOffset shouldn't be negative, as it should either in the partitionOffsets or in the earlierOffsets
+      if (startOffset < 0) {
+        throw new IOException("Failed to find start offset for topic " + topic + " and partition " + partition);
+      }
+      // Also, end offset shouldn't be negative.
+      if (endOffset < 0) {
+        throw new IOException("Failed to find end offset for topic " + topic + " and partition " + partition);
       }
 
-      long earliestOffset = start == null || start == -2 ? earliestOffsets.get(topicPartition) : start;
-      if (earliestOffset == -1) {
-        earliestOffset = latestOffset;
-      }
+      // Limit the number of records fetched
       if (maxNumberRecords > 0) {
-        latestOffset =
-          (latestOffset - earliestOffset) <= maxNumberRecords ? latestOffset : (earliestOffset + maxNumberRecords);
+        endOffset = Math.min(endOffset, startOffset + maxNumberRecords);
       }
+
       LOG.debug("Getting kafka messages from topic {}, partition {}, with earlistOffset {}, latest offset {}",
-                topicAndPartition.topic(), topicAndPartition.partition(), earliestOffset, latestOffset);
-      KafkaRequest kafkaRequest = new KafkaRequest(kafkaConf, topicAndPartition.topic(), topicAndPartition.partition());
-      kafkaRequest.setLatestOffset(latestOffset);
-      kafkaRequest.setEarliestOffset(earliestOffset);
-      kafkaRequest.setOffset(earliestOffset);
-      requests.add(kafkaRequest);
+                topic, partition, startOffset, endOffset);
+
+      requests.add(new KafkaRequest(topic, partition, kafkaConf, startOffset, endOffset));
     }
     return requests;
   }
