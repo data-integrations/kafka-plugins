@@ -105,7 +105,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     @Description("The initial offset for each topic partition in partition1:offset1,partition2:offset2 form. " +
       "These offsets will only be used for the first run of the pipeline. " +
-      "Any subsequent run will read from the latest offset from previous run." +
+      "Any subsequent run will read from the latest offset from previous run. " +
       "Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. " +
       "If not specified, the initial run will start reading from the latest message in Kafka.")
     @Nullable
