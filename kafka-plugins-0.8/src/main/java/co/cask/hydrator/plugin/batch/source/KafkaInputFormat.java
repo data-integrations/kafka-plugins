@@ -14,7 +14,7 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
+package co.cask.hydrator.plugin.batch.source;
 
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
@@ -227,12 +227,12 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
         }
         LOG.debug("Getting kafka messages from topic {}, partition {}, with earlistOffset {}, latest offset {}",
                   topicAndPartition.topic(), topicAndPartition.partition(), earliestOffset, latestOffset);
-        KafkaRequest KafkaRequest =
+        KafkaRequest kafkaRequest =
           new KafkaRequest(topicAndPartition.topic(), Integer.toString(leader.getLeaderId()),
                            topicAndPartition.partition(), leader.getUri());
-        KafkaRequest.setLatestOffset(latestOffset);
-        KafkaRequest.setEarliestOffset(earliestOffset);
-        finalRequests.add(KafkaRequest);
+        kafkaRequest.setLatestOffset(latestOffset);
+        kafkaRequest.setEarliestOffset(earliestOffset);
+        finalRequests.add(kafkaRequest);
       }
     }
     return finalRequests;
@@ -250,7 +250,7 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
         if (errorCode != ErrorMapping.NoError()) {
           throw new RuntimeException(
             String.format("Error happens when getting the offset for topic %s and partition %d with error code %d",
-                          key.topic(), key.partition(),errorCode));
+                          key.topic(), key.partition(), errorCode));
         }
       }
     }

@@ -14,7 +14,7 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
+package co.cask.hydrator.plugin.batch.source;
 
 
 import org.apache.hadoop.io.Writable;
@@ -25,8 +25,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 import javax.annotation.Nullable;
 
 /**
@@ -50,12 +48,13 @@ public class KafkaSplit extends InputSplit implements Writable {
       String leaderId = in.readUTF();
       String str = in.readUTF();
       URI uri = null;
-      if (!str.isEmpty())
+      if (!str.isEmpty()) {
         try {
           uri = new URI(str);
         } catch (URISyntaxException e) {
           throw new RuntimeException(e);
         }
+      }
       int partition = in.readInt();
       long offset = in.readLong();
       long latestOffset = in.readLong();
@@ -67,10 +66,11 @@ public class KafkaSplit extends InputSplit implements Writable {
   public void write(DataOutput out) throws IOException {
       out.writeUTF(request.getTopic());
       out.writeUTF(request.getLeaderId());
-      if (request.getURI() != null)
+      if (request.getURI() != null) {
         out.writeUTF(request.getURI().toString());
-      else
+      } else {
         out.writeUTF("");
+      }
       out.writeInt(request.getPartition());
       out.writeLong(request.getOffset());
       out.writeLong(request.getLastOffset());
