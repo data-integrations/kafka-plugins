@@ -20,6 +20,7 @@ import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
 import co.cask.cdap.api.annotation.Name;
 import co.cask.cdap.api.annotation.Plugin;
+import co.cask.cdap.api.annotation.Requirements;
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.data.batch.Input;
 import co.cask.cdap.api.data.format.FormatSpecification;
@@ -64,6 +65,7 @@ import javax.annotation.Nullable;
 @Plugin(type = BatchSource.PLUGIN_TYPE)
 @Name(KafkaBatchSource.NAME)
 @Description("Kafka batch source.")
+@Requirements(datasetTypes = {KeyValueTable.TYPE})
 public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, StructuredRecord> {
   public static final String NAME = "Kafka";
 
