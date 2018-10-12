@@ -14,7 +14,7 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
+package co.cask.hydrator.plugin.batch.source;
 
 import java.nio.ByteBuffer;
 

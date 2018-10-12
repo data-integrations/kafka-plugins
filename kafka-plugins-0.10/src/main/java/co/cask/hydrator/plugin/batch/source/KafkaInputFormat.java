@@ -14,16 +14,14 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
+package co.cask.hydrator.plugin.batch.source;
 
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.lib.KeyValueTable;
 import co.cask.hydrator.plugin.common.KafkaHelpers;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import kafka.common.TopicAndPartition;
@@ -34,6 +32,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -48,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -85,6 +85,16 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                               long maxNumberRecords, KeyValueTable table) {
     Properties properties = new Properties();
     properties.putAll(kafkaConf);
+    // change the request timeout to fetch the metadata to be 15 seconds or 1 second greater than session time out ms,
+    // since this config has to be greater than the session time out, which is by default 10 seconds
+    // the KafkaConsumer at runtime should still use the default timeout 305 seconds or whataver the user provides in
+    // kafkaConf
+    int requestTimeout = 15 * 1000;
+    if (kafkaConf.containsKey(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG)) {
+      requestTimeout = Math.max(requestTimeout,
+                                Integer.valueOf(kafkaConf.get(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG) + 1000));
+    }
+    properties.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, requestTimeout);
     try (Consumer<byte[], byte[]> consumer =
            new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
       // Get Metadata for all topics
@@ -115,14 +125,9 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
                                                         List<PartitionInfo> partitionInfos,
                                                         Map<TopicAndPartition, Long> offsets,
                                                         long maxNumberRecords, KeyValueTable table) {
-    List<TopicPartition> topicPartitions =
-      Lists.transform(partitionInfos,
-                      new Function<PartitionInfo, TopicPartition>() {
-                            @Override
-                            public TopicPartition apply(PartitionInfo input) {
-                              return new TopicPartition(input.topic(), input.partition());
-                            }
-                          });
+    List<TopicPartition> topicPartitions = partitionInfos.stream()
+      .map(info -> new TopicPartition(info.topic(), info.partition()))
+      .collect(Collectors.toList());
     Map<TopicPartition, Long> latestOffsets = KafkaHelpers.getLatestOffsets(consumer, topicPartitions);
     Map<TopicPartition, Long> earliestOffsets = KafkaHelpers.getEarliestOffsets(consumer, topicPartitions);
 

@@ -14,7 +14,7 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
+package co.cask.hydrator.plugin.batch.source;
 
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -81,8 +81,8 @@ public class KafkaRecordReader extends RecordReader<KafkaKey, KafkaMessage> {
         return false;
       }
 
-      key.set(request.getTopic(), request.getLeaderId(), request.getPartition(), request.getOffset(),
-              request.getOffset(), 0);
+      key.set(request.getTopic(), request.getPartition(), request.getOffset(),
+              request.getOffset());
       value = null;
 
       if (reader != null) {

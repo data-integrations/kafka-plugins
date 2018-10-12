@@ -39,7 +39,7 @@ import co.cask.cdap.test.ApplicationManager;
 import co.cask.cdap.test.DataSetManager;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.cdap.test.WorkflowManager;
-import co.cask.hydrator.plugin.batchSource.KafkaBatchSource;
+import co.cask.hydrator.plugin.batch.source.KafkaBatchSource;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Uninterruptibles;

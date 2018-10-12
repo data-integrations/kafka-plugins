@@ -14,21 +14,13 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin.batchSource;
-
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+package co.cask.hydrator.plugin.batch.source;
 
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Macro;
 import co.cask.cdap.api.annotation.Name;
 import co.cask.cdap.api.annotation.Plugin;
+import co.cask.cdap.api.annotation.Requirements;
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.data.batch.Input;
 import co.cask.cdap.api.data.format.FormatSpecification;
@@ -47,15 +39,28 @@ import co.cask.cdap.etl.api.batch.BatchSource;
 import co.cask.cdap.etl.api.batch.BatchSourceContext;
 import co.cask.cdap.format.RecordFormats;
 import co.cask.hydrator.common.KeyValueListParser;
+import co.cask.hydrator.common.LineageRecorder;
 import co.cask.hydrator.common.ReferencePluginConfig;
 import co.cask.hydrator.common.SourceInputFormatProvider;
 import co.cask.hydrator.common.batch.JobUtils;
+import co.cask.hydrator.plugin.common.KafkaHelpers;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Kafka batch source.
@@ -63,6 +68,7 @@ import org.apache.hadoop.mapreduce.Job;
 @Plugin(type = BatchSource.PLUGIN_TYPE)
 @Name(KafkaBatchSource.NAME)
 @Description("Kafka batch source.")
+@Requirements(datasetTypes = {KeyValueTable.TYPE})
 public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, StructuredRecord> {
   public static final String NAME = "Kafka";
 
@@ -93,17 +99,27 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     private String tableName;
 
-    @Description("The topic partitions to read from. If not specified, all partitions will be read.")
+    @Description("A comma separated list of topic partitions to read from. " +
+      "If not specified, all partitions will be read.")
     @Macro
     @Nullable
     private String partitions;
 
-    @Description("The initial offset for each topic partition. This offset will only be used for the" +
-      "first run of the pipeline. Any subsequent run will read from the latest offset from previous run." +
-      "Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read.")
+    @Description("The initial offset for each topic partition in partition1:offset1,partition2:offset2 form. " +
+      "These offsets will only be used for the first run of the pipeline. " +
+      "Any subsequent run will read from the latest offset from previous run. " +
+      "Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. " +
+      "If not specified, the initial run will start reading from the latest message in Kafka.")
     @Nullable
     @Macro
     private String initialPartitionOffsets;
+
+    @Description("The maximum of messages the source will read from each topic partition. If the current topic " +
+      "partition does not have this number of messages, the source will read to the latest offset. " +
+      "Note that this is an estimation, the acutal number of messages the source read may be smaller than this number.")
+    @Nullable
+    @Macro
+    private Long maxNumberRecords;
 
     @Description("Output schema of the source, including the timeField and keyField. " +
       "The fields excluding keyField are used in conjunction with the format " +
@@ -134,6 +150,21 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     private String offsetField;
 
+    @Description("Additional kafka consumer properties to set.")
+    @Macro
+    @Nullable
+    private String kafkaProperties;
+
+    @Description("The kerberos principal used for the source when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String principal;
+
+    @Description("The keytab location for the kerberos principal when kerberos security is enabled for kafka.")
+    @Macro
+    @Nullable
+    private String keytabLocation;
+
     public KafkaBatchConfig() {
       super("");
     }
@@ -158,6 +189,16 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     public String getTableName() {
       return tableName;
+    }
+
+    @Nullable
+    public String getPrincipal() {
+      return principal;
+    }
+
+    @Nullable
+    public String getKeytabLocation() {
+      return keytabLocation;
     }
 
     public Set<Integer> getPartitions() {
@@ -191,11 +232,16 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return Strings.isNullOrEmpty(offsetField) ? null : offsetField;
     }
 
+    public long getMaxNumberRecords() {
+      return maxNumberRecords == null ? -1 : maxNumberRecords;
+    }
+
     @Nullable
     public String getFormat() {
       return Strings.isNullOrEmpty(format) ? null : format;
     }
 
+    @Nullable
     public Schema getSchema() {
       try {
         return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
@@ -204,8 +250,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
 
-    // gets the message schema from the schema field. If the time, key, partition, or offset fields are in the configured
-    // schema, they will be removed.
+    /** Gets the message schema from the schema field.
+     * If the time, key, partition, or offset fields are in the configured schema, they will be removed.
+     */
     public Schema getMessageSchema() {
       Schema schema = getSchema();
       List<Schema.Field> messageFields = new ArrayList<>();
@@ -216,9 +263,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       for (Schema.Field field : schema.getFields()) {
         String fieldName = field.getName();
         Schema fieldSchema = field.getSchema();
-        Schema.Type fieldType = fieldSchema.isNullable() ? fieldSchema.getNonNullable().getType() : fieldSchema.getType();
+        Schema.Type fieldType = fieldSchema.isNullable()
+          ? fieldSchema.getNonNullable().getType()
+          : fieldSchema.getType();
         // if the field is not the time field and not the key field, it is a message field.
-       if (fieldName.equals(keyField)) {
+        if (fieldName.equals(keyField)) {
           if (fieldType != Schema.Type.BYTES) {
             throw new IllegalArgumentException("The key field must be of type bytes or nullable bytes.");
           }
@@ -251,7 +300,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
       if (getOffsetField() != null && !offsetFieldExists) {
         throw new IllegalArgumentException(String.format(
-          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetFieldExists));
+          "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetField));
       }
       return Schema.recordOf("kafka.message", messageFields);
     }
@@ -306,6 +355,17 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return partitionOffsets;
     }
 
+    public Map<String, String> getKafkaProperties() {
+      KeyValueListParser kvParser = new KeyValueListParser("\\s*,\\s*", ":");
+      Map<String, String> conf = new HashMap<>();
+      if (!Strings.isNullOrEmpty(kafkaProperties)) {
+        for (KeyValue<String, String> keyVal : kvParser.parse(kafkaProperties)) {
+          conf.put(keyVal.getKey(), keyVal.getValue());
+        }
+      }
+      return conf;
+    }
+
     public void validate() {
       // brokers can be null since it is macro enabled.
       if (kafkaBrokers != null) {
@@ -319,13 +379,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       if (Strings.isNullOrEmpty(format)) {
         List<Schema.Field> messageFields = messageSchema.getFields();
         if (messageFields.size() > 1) {
-          List<String> fieldNames = new ArrayList<>();
-          for (Schema.Field messageField : messageFields) {
-            fieldNames.add(messageField.getName());
-          }
+          String fieldNames = messageFields.stream().map(Schema.Field::getName).collect(Collectors.joining(","));
+
           throw new IllegalArgumentException(String.format(
             "Without a format, the schema must contain just a single message field of type bytes or nullable bytes. " +
-              "Found %s message fields (%s).", messageFields.size(), Joiner.on(',').join(fieldNames)));
+              "Found %s message fields (%s).", messageFields.size(), fieldNames));
         }
 
         Schema.Field messageField = messageFields.get(0);
@@ -339,7 +397,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
         }
       } else {
         // otherwise, if there is a format, make sure we can instantiate it.
-        FormatSpecification formatSpec = new FormatSpecification(format, messageSchema, new HashMap<String, String>());
+        FormatSpecification formatSpec = new FormatSpecification(format, messageSchema, new HashMap<>());
 
         try {
           RecordFormats.createInitializedFormat(formatSpec);
@@ -349,6 +407,8 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
             format, messageSchema, e.getMessage()), e);
         }
       }
+
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
     }
   }
 
@@ -374,9 +434,25 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       context.createDataset(tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
     }
     table = context.getDataset(tableName);
-    kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), config.getBrokerMap(),
+
+    Map<String, String> kafkaConf = new HashMap<>();
+    kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
+    // We save offsets in datasets, no need for Kafka to save them
+    kafkaConf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+    KafkaHelpers.setupKerberosLogin(kafkaConf, config.getPrincipal(), config.getKeytabLocation());
+    kafkaConf.putAll(config.getKafkaProperties());
+    kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
                                                        config.getPartitions(), config.getInitialPartitionOffsets(),
-                                                       table);
+                                                       config.getMaxNumberRecords(), table);
+    LineageRecorder lineageRecorder = new LineageRecorder(context, config.referenceName);
+    Schema schema = config.getSchema();
+    if (schema != null) {
+      lineageRecorder.createExternalDataset(schema);
+      if (schema.getFields() != null && !schema.getFields().isEmpty()) {
+        lineageRecorder.recordRead("Read", "Read from Kafka topic.",
+                                   schema.getFields().stream().map(Schema.Field::getName).collect(Collectors.toList()));
+      }
+    }
     context.setInput(Input.of(config.referenceName,
                               new SourceInputFormatProvider(KafkaInputFormat.class, conf)));
   }
@@ -395,6 +471,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void initialize(BatchRuntimeContext context) throws Exception {
     super.initialize(context);
+
     schema = config.getSchema();
     Schema messageSchema = config.getMessageSchema();
     for (Schema.Field field : schema.getFields()) {
@@ -406,14 +483,13 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
     if (config.getFormat() != null) {
-      FormatSpecification spec =
-        new FormatSpecification(config.getFormat(), messageSchema, new HashMap<String, String>());
+      FormatSpecification spec = new FormatSpecification(config.getFormat(), messageSchema, new HashMap<>());
       recordFormat = RecordFormats.createInitializedFormat(spec);
     }
   }
 
   @Override
-  public void transform(KeyValue<KafkaKey, KafkaMessage> input, Emitter<StructuredRecord> emitter) throws Exception {
+  public void transform(KeyValue<KafkaKey, KafkaMessage> input, Emitter<StructuredRecord> emitter) {
     StructuredRecord.Builder builder = StructuredRecord.builder(schema);
     if (config.getKeyField() != null) {
       builder.set(config.getKeyField(), input.getValue().getKey().array());
