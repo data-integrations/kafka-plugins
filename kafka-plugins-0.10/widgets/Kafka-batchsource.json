@@ -27,8 +27,8 @@
         },
         {
           "widget-type": "textbox",
-          "label": "Offset Table Name",
-          "name": "tableName"
+          "label": "Offset Directory",
+          "name": "offsetDir"
         },
         {
           "widget-type": "csv",

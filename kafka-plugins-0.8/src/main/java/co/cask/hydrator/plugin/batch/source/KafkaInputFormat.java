@@ -1,5 +1,5 @@
 /*
- * Copyright © 2017 Cask Data, Inc.
+ * Copyright © 2017-2018 Cask Data, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -16,14 +16,13 @@
 
 package co.cask.hydrator.plugin.batch.source;
 
-import co.cask.cdap.api.common.Bytes;
-import co.cask.cdap.api.dataset.lib.KeyValueTable;
-import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import kafka.api.PartitionOffsetRequestInfo;
+import kafka.cluster.Broker;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
+import kafka.javaapi.OffsetRequest;
 import kafka.javaapi.OffsetResponse;
 import kafka.javaapi.PartitionMetadata;
 import kafka.javaapi.TopicMetadata;
@@ -40,14 +39,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -57,17 +56,17 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaInputFormat.class);
   private static final String KAFKA_REQUEST = "kafka.request";
 
+  static final String KAFKA_BROKERS = "kafka.brokers";
+
   private static final Type LIST_TYPE = new TypeToken<List<KafkaRequest>>() { }.getType();
 
   @Override
-  public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context)
-    throws IOException, InterruptedException {
-    return new KafkaRecordReader();
+  public RecordReader<KafkaKey, KafkaMessage> createRecordReader(InputSplit split, TaskAttemptContext context) {
+    return new KafkaRecordReader(Kafka08Reader::new);
   }
 
-
   @Override
-  public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
+  public List<InputSplit> getSplits(JobContext context) {
     Gson gson = new Gson();
     List<KafkaRequest> finalRequests = gson.fromJson(context.getConfiguration().get(KAFKA_REQUEST), LIST_TYPE);
     List<InputSplit> kafkaSplits = new ArrayList<>();
@@ -80,81 +79,77 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
     return kafkaSplits;
   }
 
-  public static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic, Map<String, Integer> brokers,
-                                                     Set<Integer> partitions,
-                                                     Map<TopicAndPartition, Long> initOffsets,
-                                                     KeyValueTable table) throws Exception {
-    ArrayList<KafkaRequest> finalRequests;
-    HashMap<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo = new HashMap<>();
+  /**
+   * Generates and serializes a list of requests for reading from Kafka to the given {@link Configuration}.
+   *
+   * @param conf the hadoop configuration to update
+   * @param topic the Kafka topic
+   * @param brokers a {@link Map} from broker host to port
+   * @param partitions the set of partitions to consume from.
+   *                   If it is empty, it means reading from all available partitions under the given topic.
+   * @param maxNumberRecords maximum number of records to read in one batch per partition
+   * @param partitionOffsets the {@link KafkaPartitionOffsets} containing the starting offset for each partition
+   * @return a {@link List} of {@link KafkaRequest} that get serialized in the hadoop configuration
+   * @throws IOException if failed to setup the {@link KafkaRequest}
+   */
+  static List<KafkaRequest> saveKafkaRequests(Configuration conf, String topic,
+                                              Map<String, Integer> brokers, Set<Integer> partitions,
+                                              long maxNumberRecords,
+                                              KafkaPartitionOffsets partitionOffsets) throws Exception {
+    // Find the leader for each requested partition
+    Map<Broker, Set<Integer>> brokerPartitions = getBrokerPartitions(brokers, topic, partitions);
 
-    // Get Metadata for all topics
-    List<TopicMetadata> topicMetadataList = getKafkaMetadata(brokers, topic);
+    // Create and save the KafkaRequest
+    List<KafkaRequest> requests = createKafkaRequests(topic, brokerPartitions, maxNumberRecords, partitionOffsets);
 
-    for (TopicMetadata topicMetadata : topicMetadataList) {
-      for (PartitionMetadata partitionMetadata : topicMetadata.partitionsMetadata()) {
-        LeaderInfo leader =
-          new LeaderInfo(new URI("tcp://" + partitionMetadata.leader().connectionString()),
-                         partitionMetadata.leader().id());
-        if (partitions.isEmpty() || partitions.contains(partitionMetadata.partitionId())) {
-          if (offsetRequestInfo.containsKey(leader)) {
-            ArrayList<TopicAndPartition> topicAndPartitions = offsetRequestInfo.get(leader);
-            topicAndPartitions.add(new TopicAndPartition(topicMetadata.topic(), partitionMetadata.partitionId()));
-            offsetRequestInfo.put(leader, topicAndPartitions);
-          } else {
-            ArrayList<TopicAndPartition> topicAndPartitions = new ArrayList<>();
-            topicAndPartitions.add(new TopicAndPartition(topicMetadata.topic(), partitionMetadata.partitionId()));
-            offsetRequestInfo.put(leader, topicAndPartitions);
-          }
-        }
-      }
-    }
-
-    // Get the latest offsets and generate the KafkaRequests
-    finalRequests = fetchLatestOffsetAndCreateKafkaRequests(offsetRequestInfo, initOffsets, table);
-
-    Collections.sort(finalRequests, new Comparator<KafkaRequest>() {
-      @Override
-      public int compare(KafkaRequest r1, KafkaRequest r2) {
-        return r1.getTopic().compareTo(r2.getTopic());
-      }
-    });
-
-    Map<KafkaRequest, KafkaKey> offsetKeys = new HashMap<>();
-    for (KafkaRequest request : finalRequests) {
-      KafkaKey key = offsetKeys.get(request);
-
-      if (key != null) {
-        request.setOffset(key.getOffset());
-        request.setAvgMsgSize(key.getMessageSize());
-      }
-
-      if (request.getEarliestOffset() > request.getOffset() || request.getOffset() > request.getLastOffset()) {
-
-        boolean offsetUnset = request.getOffset() == KafkaRequest.DEFAULT_OFFSET;
-        // When the offset is unset, it means it's a new topic/partition, we also need to consume the earliest offset
-        if (offsetUnset) {
-          request.setOffset(request.getEarliestOffset());
-          offsetKeys.put(
-            request,
-            new KafkaKey(request.getTopic(), request.getLeaderId(), request.getPartition(), 0, request.getOffset()));
-        }
-      }
-    }
-    conf.set(KAFKA_REQUEST, new Gson().toJson(finalRequests));
-    return finalRequests;
+    conf.set(KAFKA_REQUEST, new Gson().toJson(requests));
+    return requests;
   }
 
-  private static List<TopicMetadata> getKafkaMetadata(Map<String, Integer> brokers, String topic) {
-    List<TopicMetadata> topicMetadataList = new ArrayList<>();
+  /**
+   * Returns a {@link Map} from {@link Broker} to the set of partitions that the given broker is a leader of.
+   */
+  private static Map<Broker, Set<Integer>> getBrokerPartitions(Map<String, Integer> brokers,
+                                                               String topic, Set<Integer> partitions) {
+    TopicMetadataRequest request = new TopicMetadataRequest(Collections.singletonList(topic));
+    Map<Broker, Set<Integer>> result = new HashMap<>();
+    Set<Integer> partitionsRemained = new HashSet<>(partitions);
 
+    // Goes through the list of broker to fetch topic metadata. It uses the first one that returns
     for (Map.Entry<String, Integer> entry : brokers.entrySet()) {
       SimpleConsumer consumer = createSimpleConsumer(entry.getKey(), entry.getValue());
       LOG.debug("Fetching metadata from broker {}: {} with client id {} for topic {}", entry.getKey(),
                 entry.getValue(), consumer.clientId(), topic);
       try {
-        topicMetadataList =
-          consumer.send(new TopicMetadataRequest(ImmutableList.of(topic))).topicsMetadata();
-        break;
+        boolean hasError = false;
+        for (TopicMetadata metadata : consumer.send(request).topicsMetadata()) {
+          // This shouldn't happen. In case it does, just skip the metadata not for the right topic
+          if (!topic.equals(metadata.topic())) {
+            continue;
+          }
+
+          // Associate partition to leader broker
+          for (PartitionMetadata partitionMetadata : metadata.partitionsMetadata()) {
+            int partitionId = partitionMetadata.partitionId();
+
+            // Skip error
+            if (partitionMetadata.errorCode() != ErrorMapping.NoError()) {
+              hasError = true;
+              continue;
+            }
+            // Add the partition if either the user wants all partitions or user explicitly request a set.
+            // If the user wants all partitions, the partitions set is empty
+            if (partitions.isEmpty() || partitionsRemained.remove(partitionId)) {
+              result.computeIfAbsent(partitionMetadata.leader(), k -> new HashSet<>()).add(partitionId);
+            }
+          }
+        }
+
+        // If there is no error and all partitions are needed, then we are done
+        // Alternatively, if only a subset of partitions are needed and all of them are fetch, then we are also done
+        if ((!hasError && partitions.isEmpty()) || (!partitions.isEmpty() && partitionsRemained.isEmpty())) {
+          return result;
+        }
       } catch (Exception e) {
         // No-op just query next broker
       } finally  {
@@ -162,13 +157,9 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
       }
     }
 
-    if (topicMetadataList.isEmpty()) {
-      throw new IllegalArgumentException(
-        String.format("Failed to get any information for topic: %s from the given brokers: %s", topic,
-                      brokers.toString()));
-    }
-
-    return topicMetadataList;
+    throw new IllegalArgumentException(
+      String.format("Failed to get broker information for partitions %s in topic %s from the given brokers: %s",
+                    partitionsRemained, topic, brokers));
   }
 
   private static SimpleConsumer createSimpleConsumer(String host, int port) {
@@ -176,84 +167,95 @@ public class KafkaInputFormat extends InputFormat<KafkaKey, KafkaMessage> {
   }
 
   /**
-   * Gets the latest offsets and create the requests as needed
+   * Creates a list of {@link KafkaRequest} by setting up the start and end offsets for each request. It may
+   * query Kafka using the given set of brokers for the earliest and latest offsets in the given set of partitions.
    */
-  private static ArrayList<KafkaRequest> fetchLatestOffsetAndCreateKafkaRequests(
-    Map<LeaderInfo, ArrayList<TopicAndPartition>> offsetRequestInfo,
-    Map<TopicAndPartition, Long> offsets,
-    KeyValueTable table) {
-    ArrayList<KafkaRequest> finalRequests = new ArrayList<>();
-    for (LeaderInfo leader : offsetRequestInfo.keySet()) {
-      Long latestTime = kafka.api.OffsetRequest.LatestTime();
-      Long earliestTime = kafka.api.OffsetRequest.EarliestTime();
+  private static List<KafkaRequest> createKafkaRequests(String topic, Map<Broker, Set<Integer>> brokerPartitions,
+                                                        long maxNumberRecords,
+                                                        KafkaPartitionOffsets partitionOffsets) throws IOException {
+    List<KafkaRequest> result = new ArrayList<>();
+    String brokerString = brokerPartitions.keySet().stream()
+      .map(b -> b.host() + ":" + b.port()).collect(Collectors.joining(","));
 
-      SimpleConsumer consumer = createSimpleConsumer(leader.getUri().getHost(), leader.getUri().getPort());
-      // Latest Offset
-      PartitionOffsetRequestInfo partitionLatestOffsetRequestInfo = new PartitionOffsetRequestInfo(latestTime, 1);
-      // Earliest Offset
-      PartitionOffsetRequestInfo partitionEarliestOffsetRequestInfo = new PartitionOffsetRequestInfo(earliestTime, 1);
-      Map<TopicAndPartition, PartitionOffsetRequestInfo> latestOffsetInfo = new HashMap<>();
-      Map<TopicAndPartition, PartitionOffsetRequestInfo> earliestOffsetInfo = new HashMap<>();
-      ArrayList<TopicAndPartition> topicAndPartitions = offsetRequestInfo.get(leader);
-      for (TopicAndPartition topicAndPartition : topicAndPartitions) {
-        latestOffsetInfo.put(topicAndPartition, partitionLatestOffsetRequestInfo);
-        earliestOffsetInfo.put(topicAndPartition, partitionEarliestOffsetRequestInfo);
-      }
+    for (Map.Entry<Broker, Set<Integer>> entry : brokerPartitions.entrySet()) {
+      Broker broker = entry.getKey();
+      SimpleConsumer consumer = createSimpleConsumer(broker.host(), broker.port());
+      try {
+        // Get the latest offsets for partitions in this broker
+        Map<Integer, Long> latestOffsets = getOffsetsBefore(consumer, topic, entry.getValue(),
+                                                            kafka.api.OffsetRequest.LatestTime());
 
-      OffsetResponse latestOffsetResponse = getLatestOffsetResponse(consumer, latestOffsetInfo);
-      OffsetResponse earliestOffsetResponse = null;
-      if (latestOffsetResponse != null) {
-        earliestOffsetResponse = getLatestOffsetResponse(consumer, earliestOffsetInfo);
-      }
-      consumer.close();
-      if (earliestOffsetResponse == null) {
-        continue;
-      }
+        // If there is no known partition offset for a given partition, also need to query for the earliest offset
+        long earliestTime = kafka.api.OffsetRequest.EarliestTime();
+        Set<Integer> earliestTimePartitions = entry.getValue().stream()
+          .filter(p -> partitionOffsets.getPartitionOffset(p, earliestTime) == earliestTime)
+          .collect(Collectors.toSet());
 
-      for (TopicAndPartition topicAndPartition : topicAndPartitions) {
-        long latestOffset = latestOffsetResponse.offsets(topicAndPartition.topic(), topicAndPartition.partition())[0];
-        Long start;
-        byte[] tableStart = table.read(topicAndPartition.toString());
-        if (tableStart != null) {
-          start = Bytes.toLong(tableStart);
-        } else {
-          start = offsets.containsKey(topicAndPartition) ? offsets.get(topicAndPartition) - 1 : null;
+        Map<Integer, Long> earliestOffsets = getOffsetsBefore(consumer, topic, earliestTimePartitions, earliestTime);
+
+        // Add KafkaRequest objects for the partitions in this broker
+        for (int partition : entry.getValue()) {
+          long startOffset = partitionOffsets.getPartitionOffset(partition,
+                                                                 earliestOffsets.getOrDefault(partition, -1L));
+          long endOffset = latestOffsets.getOrDefault(partition, -1L);
+
+          // StartOffset shouldn't be negative, as it should either in the partitionOffsets or in the earlierOffsets
+          if (startOffset < 0) {
+            throw new IOException("Failed to find start offset for topic " + topic + " and partition " + partition);
+          }
+          // Also, end offset shouldn't be negative.
+          if (endOffset < 0) {
+            throw new IOException("Failed to find end offset for topic " + topic + " and partition " + partition);
+          }
+
+          // Limit the number of records fetched
+          if (maxNumberRecords > 0) {
+            endOffset = Math.min(endOffset, startOffset + maxNumberRecords);
+          }
+
+          LOG.debug("Getting kafka messages from topic {}, partition {}, with start offset {}, end offset {}",
+                    topic, partition, startOffset,  endOffset);
+
+          result.add(new KafkaRequest(topic, partition, Collections.singletonMap(KAFKA_BROKERS, brokerString),
+                                      startOffset, endOffset));
         }
 
-        long earliestOffset = start == null || start == -2
-          ? earliestOffsetResponse.offsets(topicAndPartition.topic(), topicAndPartition.partition())[0] : start;
-        if (earliestOffset == -1) {
-          earliestOffset = latestOffset;
-        }
-        LOG.debug("Getting kafka messages from topic {}, partition {}, with earlistOffset {}, latest offset {}",
-                  topicAndPartition.topic(), topicAndPartition.partition(), earliestOffset, latestOffset);
-        KafkaRequest kafkaRequest =
-          new KafkaRequest(topicAndPartition.topic(), Integer.toString(leader.getLeaderId()),
-                           topicAndPartition.partition(), leader.getUri());
-        kafkaRequest.setLatestOffset(latestOffset);
-        kafkaRequest.setEarliestOffset(earliestOffset);
-        finalRequests.add(kafkaRequest);
+      } finally {
+        consumer.close();
       }
     }
-    return finalRequests;
+
+    return result;
   }
 
-  private static OffsetResponse getLatestOffsetResponse(SimpleConsumer consumer,
-                                                 Map<TopicAndPartition, PartitionOffsetRequestInfo> offsetInfo) {
-
-    OffsetResponse offsetResponse =
-      consumer.getOffsetsBefore(new kafka.javaapi.OffsetRequest(offsetInfo, kafka.api.OffsetRequest.CurrentVersion(),
-                                                                "client"));
-    if (offsetResponse.hasError()) {
-      for (TopicAndPartition key : offsetInfo.keySet()) {
-        short errorCode = offsetResponse.errorCode(key.topic(), key.partition());
+  /**
+   * Queries Kafka for the offsets before the given time for the given set of partitions.
+   */
+  private static Map<Integer, Long> getOffsetsBefore(SimpleConsumer consumer, String topic,
+                                                     Set<Integer> partitions, long time) throws IOException {
+    if (partitions.isEmpty()) {
+      return Collections.emptyMap();
+    }
+    Map<TopicAndPartition, PartitionOffsetRequestInfo> request =
+      partitions.stream().collect(Collectors.toMap(p -> new TopicAndPartition(topic, p),
+                                                   p -> new PartitionOffsetRequestInfo(time, 1)));
+    OffsetResponse response = consumer.getOffsetsBefore(new OffsetRequest(request,
+                                                                          kafka.api.OffsetRequest.CurrentVersion(),
+                                                                          "client"));
+    if (response.hasError()) {
+      for (int partition : partitions) {
+        short errorCode = response.errorCode(topic, partition);
         if (errorCode != ErrorMapping.NoError()) {
           throw new RuntimeException(
-            String.format("Error happens when getting the offset for topic %s and partition %d with error code %d",
-                          key.topic(), key.partition(), errorCode));
+            String.format("Failed to get the offset for topic %s and partition %d with error code %d",
+                          topic, partition, errorCode));
         }
       }
+
+      // This shouldn't happen
+      throw new IOException("Failed to get offsets for topic " + topic + " and partitions " + partitions);
     }
-    return offsetResponse;
+
+    return partitions.stream().collect(Collectors.toMap(p -> p, p -> response.offsets(topic, p)[0]));
   }
 }
