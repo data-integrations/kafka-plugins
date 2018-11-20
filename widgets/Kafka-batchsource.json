@@ -31,6 +31,11 @@
           "name": "tableName"
         },
         {
+          "widget-type": "textbox",
+          "label": "Consumer Group Id",
+          "name": "consumerGroupId"
+        },
+        {
           "widget-type": "csv",
           "label": "Topic Partitions",
           "name": "partitions",

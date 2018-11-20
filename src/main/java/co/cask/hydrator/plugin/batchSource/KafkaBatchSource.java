@@ -48,6 +48,7 @@ import kafka.common.TopicAndPartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -123,6 +124,10 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       "If no format is given, Kafka message payloads will be treated as bytes.")
     @Nullable
     private String format;
+
+    @Description("Optional Consumer Group Id of the Kafka Consumer Group.")
+    @Nullable
+    private String consumerGroupId;
 
     @Description("Optional name of the field containing the message key. " +
       "If this is not set, no key field will be added to output records. " +
@@ -231,6 +236,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     public String getFormat() {
       return Strings.isNullOrEmpty(format) ? null : format;
+    }
+
+    @Nullable
+    public String getConsumerGroupId() {
+      return Strings.isNullOrEmpty(consumerGroupId) ? null : consumerGroupId;
     }
 
     public Schema getSchema() {
@@ -425,6 +435,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     Map<String, String> kafkaConf = new HashMap<>();
     kafkaConf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBrokers());
     kafkaConf.putAll(config.getKafkaProperties());
+    if(StringUtils.isNotEmpty(config.getConsumerGroupId())){
+      kafkaConf.put(ConsumerConfig.GROUP_ID_CONFIG, config.getConsumerGroupId());
+    }
     if (config.getKeytabLocation() != null && config.getPrincipal() != null) {
       kafkaConf.put("sasl.jaas.config", String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
                                                         "        useKeyTab=true \n" +
