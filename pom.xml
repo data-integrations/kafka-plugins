@@ -54,11 +54,17 @@
       <id>sonatype-snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </repository>
+    <repository>
+      <id>conjars</id>
+      <name>Conjars</name>
+      <url>http://conjars.org/repo</url>
+      <layout>default</layout>
+    </repository>
   </repositories>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.3.1</cdap.version>
+    <cdap.version>5.1.0</cdap.version>
     <hydrator.version>1.8.1</hydrator.version>
     <spark.version>1.6.1</spark.version>
     <widgets.dir>widgets</widgets.dir>
@@ -66,7 +72,7 @@
     <kafka.version>0.9.0.1</kafka.version>
     <hadoop.version>2.3.0</hadoop.version>
     <!-- properties for script build step that creates the config files for the artifacts -->
-    <app.parents>system:cdap-data-streams[4.3.0-SNAPSHOT,5.0.0),system:cdap-data-pipeline[4.3.0-SNAPSHOT,5.0.0)</app.parents>
+    <app.parents>system:cdap-data-streams[5.1.0,6.0.0-SNAPSHOT),system:cdap-data-pipeline[5.1.0,6.0.0-SNAPSHOT)</app.parents>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
 
@@ -235,6 +241,12 @@
           <artifactId>guava</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.pentaho</groupId>
+      <artifactId>pentaho-aggdesigner-algorithm</artifactId>
+      <version>5.1.5-jhyde</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
