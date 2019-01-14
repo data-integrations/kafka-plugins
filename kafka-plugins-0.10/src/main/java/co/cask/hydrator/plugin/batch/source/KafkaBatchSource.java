@@ -26,7 +26,6 @@ import co.cask.cdap.api.data.format.RecordFormat;
 import co.cask.cdap.api.data.format.StructuredRecord;
 import co.cask.cdap.api.data.schema.Schema;
 import co.cask.cdap.api.dataset.lib.KeyValue;
-import co.cask.cdap.api.flow.flowlet.StreamEvent;
 import co.cask.cdap.common.io.ByteBuffers;
 import co.cask.cdap.etl.api.Emitter;
 import co.cask.cdap.etl.api.PipelineConfigurer;
@@ -50,6 +49,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +68,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   private final Kafka10BatchConfig config;
   private List<KafkaRequest> kafkaRequests;
   private Schema schema;
-  private RecordFormat<StreamEvent, StructuredRecord> recordFormat;
+  private RecordFormat<ByteBuffer, StructuredRecord> recordFormat;
   private String messageField;
   private FileContext fileContext;
   private Path offsetsFile;
@@ -231,7 +231,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     if (config.getFormat() == null) {
       builder.set(messageField, ByteBuffers.getByteArray(input.getValue().getPayload()));
     } else {
-      StructuredRecord messageRecord = recordFormat.read(new StreamEvent(input.getValue().getPayload()));
+      StructuredRecord messageRecord = recordFormat.read(input.getValue().getPayload());
       for (Schema.Field field : messageRecord.getSchema().getFields()) {
         String fieldName = field.getName();
         builder.set(fieldName, messageRecord.get(fieldName));
