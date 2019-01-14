@@ -23,7 +23,6 @@ import co.cask.cdap.api.data.format.FormatSpecification;
 import co.cask.cdap.api.data.format.RecordFormat;
 import co.cask.cdap.api.data.format.StructuredRecord;
 import co.cask.cdap.api.data.schema.Schema;
-import co.cask.cdap.api.flow.flowlet.StreamEvent;
 import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.streaming.StreamingContext;
 import co.cask.cdap.etl.api.streaming.StreamingSource;
@@ -271,7 +270,7 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
    * Everything here should be serializable, as Spark Streaming will serialize all functions.
    */
   private static class FormatFunction extends BaseFunction {
-    private transient RecordFormat<StreamEvent, StructuredRecord> recordFormat;
+    private transient RecordFormat<ByteBuffer, StructuredRecord> recordFormat;
 
     FormatFunction(long ts, KafkaConfig conf) {
       super(ts, conf);
@@ -283,11 +282,11 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
       if (recordFormat == null) {
         Schema messageSchema = conf.getMessageSchema();
         FormatSpecification spec =
-          new FormatSpecification(conf.getFormat(), messageSchema, new HashMap<String, String>());
+          new FormatSpecification(conf.getFormat(), messageSchema, new HashMap<>());
         recordFormat = RecordFormats.createInitializedFormat(spec);
       }
 
-      StructuredRecord messageRecord = recordFormat.read(new StreamEvent(ByteBuffer.wrap(message)));
+      StructuredRecord messageRecord = recordFormat.read(ByteBuffer.wrap(message));
       for (Schema.Field field : messageRecord.getSchema().getFields()) {
         String fieldName = field.getName();
         builder.set(fieldName, messageRecord.get(fieldName));
