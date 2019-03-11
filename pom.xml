@@ -108,7 +108,7 @@
     <kafka10.version>0.10.2.0</kafka10.version>
     <hadoop.version>2.3.0</hadoop.version>
     <netty.version>4.1.16.Final</netty.version>
-    <netty-http.version>1.0.0</netty-http.version>
+    <netty-http.version>1.2.0</netty-http.version>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
 
@@ -301,7 +301,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>co.cask.http</groupId>
+      <groupId>io.cdap.http</groupId>
       <artifactId>netty-http</artifactId>
       <version>${netty-http.version}</version>
       <scope>test</scope>
