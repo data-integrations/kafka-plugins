@@ -85,7 +85,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     KafkaPartitionOffsets partitionOffsets = config.getInitialPartitionOffsets();
 
     // If the offset directory is provided, try to load the file
-    if (config.getOffsetDir() != null) {
+    if (!context.isPreviewEnabled() && config.getOffsetDir() != null) {
       Path offsetDir = new Path(URI.create(config.getOffsetDir()));
       fileContext = FileContext.getFileContext(offsetDir.toUri(), conf);
       try {
@@ -117,6 +117,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
   @Override
   public void onRunFinish(boolean succeeded, BatchSourceContext context) {
+    if (context.isPreviewEnabled()) {
+      return;
+    }
     if (succeeded && kafkaRequests != null && fileContext != null && offsetsFile != null) {
       KafkaPartitionOffsets partitionOffsets = new KafkaPartitionOffsets(
         kafkaRequests.stream().collect(Collectors.toMap(KafkaRequest::getPartition, KafkaRequest::getEndOffset)));
