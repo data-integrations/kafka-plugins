@@ -139,7 +139,7 @@
           "fields": [
             {
               "name": "message",
-              "type": ["bytes", "null"]
+              "type": "string"
             }
           ]
         },
