@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <name>Apache Kafka plugins</name>
-  <groupId>co.cask.hydrator</groupId>
+  <groupId>io.cdap.plugin</groupId>
   <artifactId>kafka-plugins</artifactId>
   <packaging>pom</packaging>
   <version>2.1.0-SNAPSHOT</version>
@@ -26,15 +26,15 @@
 
   <developers>
     <developer>
-      <name>Cask Data</name>
-      <email>cask-dev@googlegroups.com</email>
-      <organization>Cask Data, Inc.</organization>
-      <organizationUrl>http://www.cdap.io</organizationUrl>
+      <name>CDAP</name>
+      <email>cdap-dev@googlegroups.com</email>
+      <organization>CDAP</organization>
+      <organizationUrl>http://cdap.io</organizationUrl>
     </developer>
   </developers>
 
   <issueManagement>
-    <url>https://issues.cask.co/browse/HYDRATOR</url>
+    <url>https://issues.cask.co/browse/CDAP</url>
   </issueManagement>
 
   <distributionManagement>
@@ -46,10 +46,6 @@
       <id>sonatype.snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </snapshotRepository>
-    <site>
-      <id>cask</id>
-      <url>http://cask.co</url>
-    </site>
   </distributionManagement>
 
   <repositories>
@@ -99,7 +95,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <cdap.version>6.0.0-SNAPSHOT</cdap.version>
-    <hydrator.version>2.2.0-SNAPSHOT</hydrator.version>
+    <cdap.plugin.version>2.2.0-SNAPSHOT</cdap.plugin.version>
     <spark1.version>1.6.1</spark1.version>
     <spark2.version>2.2.0</spark2.version>
     <widgets.dir>widgets</widgets.dir>
@@ -114,19 +110,19 @@
 
   <dependencies>
     <dependency>
-      <groupId>co.cask.cdap</groupId>
+      <groupId>io.cdap.cdap</groupId>
       <artifactId>cdap-etl-api</artifactId>
       <version>${cdap.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>co.cask.cdap</groupId>
+      <groupId>io.cdap.cdap</groupId>
       <artifactId>cdap-etl-api-spark</artifactId>
       <version>${cdap.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>co.cask.cdap</groupId>
+      <groupId>io.cdap.cdap</groupId>
       <artifactId>cdap-common</artifactId>
       <version>${cdap.version}</version>
       <scope>provided</scope>
@@ -142,12 +138,12 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>co.cask.cdap</groupId>
+      <groupId>io.cdap.cdap</groupId>
       <artifactId>cdap-formats</artifactId>
       <version>${cdap.version}</version>
     </dependency>
     <dependency>
-      <groupId>co.cask.cdap</groupId>
+      <groupId>io.cdap.cdap</groupId>
       <artifactId>hydrator-test</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
@@ -163,9 +159,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>co.cask.hydrator</groupId>
+      <groupId>io.cdap.plugin</groupId>
       <artifactId>hydrator-common</artifactId>
-      <version>${hydrator.version}</version>
+      <version>${cdap.plugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
