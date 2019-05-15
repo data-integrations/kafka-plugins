@@ -74,42 +74,42 @@ batch when the record was read. It will also contain a field named 'key' which w
 the message key in it. It parses the Kafka messages using the 'csv' format
 with 'user', 'item', 'count', and 'price' as the message schema.
 
-    {
-        "name": "Kafka",
-        "type": "streamingsource",
-        "properties": {
-            "topics": "purchases",
-            "brokers": "host1.example.com:9092,host2.example.com:9092",
-            "format": "csv",
-            "timeField": "readTime",
-            "keyField": "key",
-            "schema": "{
-                \"type\":\"record\",
-                \"name\":\"purchase\",
-                \"fields\":[
-                    {\"name\":\"readTime\",\"type\":\"long\"},
-                    {\"name\":\"key\",\"type\":\"bytes\"},
-                    {\"name\":\"user\",\"type\":\"string\"},
-                    {\"name\":\"item\",\"type\":\"string\"},
-                    {\"name\":\"count\",\"type\":\"int\"},
-                    {\"name\":\"price\",\"type\":\"double\"}
-                ]
-            }"
-        }
+```json
+{
+    "name": "Kafka",
+    "type": "streamingsource",
+    "properties": {
+        "topics": "purchases",
+        "brokers": "host1.example.com:9092,host2.example.com:9092",
+        "format": "csv",
+        "timeField": "readTime",
+        "keyField": "key",
+        "schema": "{
+            \"type\":\"record\",
+            \"name\":\"purchase\",
+            \"fields\":[
+                {\"name\":\"readTime\",\"type\":\"long\"},
+                {\"name\":\"key\",\"type\":\"bytes\"},
+                {\"name\":\"user\",\"type\":\"string\"},
+                {\"name\":\"item\",\"type\":\"string\"},
+                {\"name\":\"count\",\"type\":\"int\"},
+                {\"name\":\"price\",\"type\":\"double\"}
+            ]
+        }"
     }
+}
+```
 
 For each Kafka message read, it will output a record with the schema:
 
-    +================================+
-    | field name  | type             |
-    +================================+
-    | readTime    | long             |
-    | key         | bytes            |
-    | user        | string           |
-    | item        | string           |
-    | count       | int              |
-    | price       | double           |
-    +================================+
+| field name  | type             |
+| ----------- | ---------------- |
+| readTime    | long             |
+| key         | bytes            |
+| user        | string           |
+| item        | string           |
+| count       | int              |
+| price       | double           |
 
 Note that the readTime field is not derived from the Kafka message, but from the time that the
 message was read.

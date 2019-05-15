@@ -36,18 +36,19 @@ using compression type 'gzip'. The written events will be written in csv format
 to kafka running at localhost. The Kafka partition will be decided based on the provided key 'ts'.
 Additional properties like number of acknowledgements and client id can also be provided.
 
-
-    {
-        "name": "Kafka",
-        "type": "batchsink",
-        "properties": {
-            "referenceName": "Kafka",
-            "brokers": "localhost:9092",
-            "topic": "alarm",
-            "async": "FALSE",
-            "compressionType": "gzip",
-            "format": "CSV",
-            "kafkaProperties": "acks:2,client.id:myclient",
-            "key": "message"
-        }
+```json
+{
+    "name": "Kafka",
+    "type": "batchsink",
+    "properties": {
+        "referenceName": "Kafka",
+        "brokers": "localhost:9092",
+        "topic": "alarm",
+        "async": "FALSE",
+        "compressionType": "gzip",
+        "format": "CSV",
+        "kafkaProperties": "acks:2,client.id:myclient",
+        "key": "message"
     }
+}
+```
