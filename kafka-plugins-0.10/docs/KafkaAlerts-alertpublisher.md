@@ -27,13 +27,14 @@ This example publishes alerts to already existing kafka topic alarm as json obje
 The kafka broker is running at localhost and port 9092. Additional kafka producer properties 
 are like acks and client.id are specified as well.
 
-
-    {
-        "name": "Kafka",
-        "type": "alertpublisher",
-        "properties": {
-            "brokers": "localhost:9092",
-            "topic": "alarm",
-            "producerProperties": "acks:2,client.id:myclient"
-        }
+```json
+{
+    "name": "Kafka",
+    "type": "alertpublisher",
+    "properties": {
+        "brokers": "localhost:9092",
+        "topic": "alarm",
+        "producerProperties": "acks:2,client.id:myclient"
     }
+}
+```

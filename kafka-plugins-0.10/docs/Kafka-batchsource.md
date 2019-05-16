@@ -73,36 +73,36 @@ on brokers host1.example.com:9092 and host2.example.com:9092. The source will ad
 a field named 'key' which will have the message key in it. It parses the Kafka messages 
 using the 'csv' format with 'user', 'item', 'count', and 'price' as the message schema.
 
-    {
-        "name": "Kafka",
-        "type": "streamingsource",
-        "properties": {
-            "topics": "purchases",
-            "brokers": "host1.example.com:9092,host2.example.com:9092",
-            "format": "csv",
-            "keyField": "key",
-            "schema": "{
-                \"type\":\"record\",
-                \"name\":\"purchase\",
-                \"fields\":[
-                    {\"name\":\"key\",\"type\":\"bytes\"},
-                    {\"name\":\"user\",\"type\":\"string\"},
-                    {\"name\":\"item\",\"type\":\"string\"},
-                    {\"name\":\"count\",\"type\":\"int\"},
-                    {\"name\":\"price\",\"type\":\"double\"}
-                ]
-            }"
-        }
+```json
+{
+    "name": "Kafka",
+    "type": "streamingsource",
+    "properties": {
+        "topics": "purchases",
+        "brokers": "host1.example.com:9092,host2.example.com:9092",
+        "format": "csv",
+        "keyField": "key",
+        "schema": "{
+            \"type\":\"record\",
+            \"name\":\"purchase\",
+            \"fields\":[
+                {\"name\":\"key\",\"type\":\"bytes\"},
+                {\"name\":\"user\",\"type\":\"string\"},
+                {\"name\":\"item\",\"type\":\"string\"},
+                {\"name\":\"count\",\"type\":\"int\"},
+                {\"name\":\"price\",\"type\":\"double\"}
+            ]
+        }"
     }
+}
+```
 
 For each Kafka message read, it will output a record with the schema:
 
-    +================================+
-    | field name  | type             |
-    +================================+
-    | key         | bytes            |
-    | user        | string           |
-    | item        | string           |
-    | count       | int              |
-    | price       | double           |
-    +================================+
+| field name  | type             |
+| ----------- | ---------------- |
+| key         | bytes            |
+| user        | string           |
+| item        | string           |
+| count       | int              |
+| price       | double           |
