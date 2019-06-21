@@ -23,7 +23,14 @@
         {
           "widget-type": "textbox",
           "label": "Kafka Topic",
-          "name": "topic"
+          "name": "topic",
+          "plugin-function": {
+            "label": "Browse",
+            "widget": "connection-browser",
+            "widget-attributes": {
+              "connectionType": "KAFKA"
+            }
+          }
         },
         {
           "widget-type": "csv",
