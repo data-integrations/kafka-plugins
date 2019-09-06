@@ -104,7 +104,7 @@
     <kafka10.version>0.10.2.0</kafka10.version>
     <hadoop.version>2.3.0</hadoop.version>
     <netty.version>4.1.16.Final</netty.version>
-    <netty-http.version>1.2.0</netty-http.version>
+    <netty-http.version>1.3.0</netty-http.version>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
 
