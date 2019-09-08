@@ -21,6 +21,14 @@
           }
         },
         {
+          "widget-type": "connection-browser",
+          "widget-category": "plugin",
+          "widget-attributes": {
+            "connectionType": "KAFKA",
+            "label": "Browse"
+          }
+        },
+        {
           "widget-type": "textbox",
           "label": "Kafka Topic",
           "name": "topic"
