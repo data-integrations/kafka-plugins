@@ -27,6 +27,7 @@ import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.etl.api.Alert;
 import io.cdap.cdap.etl.api.AlertPublisher;
 import io.cdap.cdap.etl.api.AlertPublisherContext;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.plugin.common.KafkaHelpers;
 import io.cdap.plugin.common.KeyValueListParser;
@@ -62,13 +63,14 @@ public class KafkaAlertPublisher extends AlertPublisher {
 
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
-    config.validate();
+    config.validate(pipelineConfigurer.getStageConfigurer().getFailureCollector());
   }
 
   @Override
   public void initialize(AlertPublisherContext context) throws Exception {
     super.initialize(context);
-    config.validate();
+    config.validate(context.getFailureCollector());
+    context.getFailureCollector().getOrThrowException();
     Properties props = new Properties();
     // Add client id property with stage name as value.
     props.put(ProducerConfig.CLIENT_ID_CONFIG, context.getStageName());
@@ -112,6 +114,7 @@ public class KafkaAlertPublisher extends AlertPublisher {
    */
   public static class Config extends PluginConfig {
 
+    public static final String TOPIC = "topic";
     @Name("brokers")
     @Description("Specifies the connection string where Producer can find one or more brokers to " +
       "determine the leader for each topic.")
@@ -157,7 +160,7 @@ public class KafkaAlertPublisher extends AlertPublisher {
       return producerProps;
     }
 
-    private void validate() {
+    private void validate(FailureCollector collector) {
       // If the topic or brokers are macros they would not be available at config time. So do not perform
       // validations yet.
       if (Strings.isNullOrEmpty(topic) || Strings.isNullOrEmpty(brokers)) {
@@ -167,11 +170,13 @@ public class KafkaAlertPublisher extends AlertPublisher {
       try {
         Topic.validate(topic);
       } catch (InvalidTopicException e) {
-        throw new IllegalArgumentException(String.format("Topic name %s is not a valid kafka topic. Please provide " +
-                                                           "valid kafka topic name. %s", topic, e.getMessage()));
+        collector.addFailure(String.format(
+          "Topic name %s is not a valid kafka topic. Please provide valid kafka topic name. %s", topic,
+          e.getMessage()), null)
+          .withConfigProperty(TOPIC);
       }
 
-      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation, collector);
     }
   }
 }

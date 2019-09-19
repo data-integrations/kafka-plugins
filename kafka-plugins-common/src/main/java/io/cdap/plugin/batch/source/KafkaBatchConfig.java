@@ -8,6 +8,7 @@ import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.data.format.FormatSpecification;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.format.RecordFormats;
 import io.cdap.plugin.common.KeyValueListParser;
 import io.cdap.plugin.common.ReferencePluginConfig;
@@ -28,6 +29,14 @@ import javax.annotation.Nullable;
  * Config properties for the plugin.
  */
 public class KafkaBatchConfig extends ReferencePluginConfig {
+
+  public static final String KEY_FIELD = "keyField";
+  public static final String PARTITION_FIELD = "partitionField";
+  public static final String OFFSET_FIELD = "offsetField";
+  public static final String SCHEMA = "schema";
+  public static final String INITIAL_PARTITION_OFFSETS = "initialPartitionOffsets";
+  public static final String FORMAT = "format";
+  public static final String KAFKA_BROKERS = "kafkaBrokers";
 
   @Description("Kafka topic to read from.")
   @Macro
@@ -121,7 +130,7 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
     return offsetDir;
   }
 
-  public Set<Integer> getPartitions() {
+  public Set<Integer> getPartitions(FailureCollector collector) {
     Set<Integer> partitionSet = new HashSet<>();
     if (partitions == null) {
       return partitionSet;
@@ -130,8 +139,8 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       try {
         partitionSet.add(Integer.parseInt(partition));
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(
-          String.format("Invalid partition '%s'. Partitions must be integers.", partition));
+        collector.addFailure(String.format("Invalid partition '%s'. Partitions must be integers.", partition), null)
+          .withConfigElement("partitions", partition);
       }
     }
     return partitionSet;
@@ -162,11 +171,12 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   }
 
   @Nullable
-  public Schema getSchema() {
+  public Schema getSchema(FailureCollector collector) {
     try {
       return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
     } catch (IOException e) {
-      throw new IllegalArgumentException("Unable to parse schema: " + e.getMessage());
+      collector.addFailure("Unable to parse schema: " + e.getMessage(), null).withConfigProperty(SCHEMA);
+      return null;
     }
   }
 
@@ -174,8 +184,11 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
    * Gets the message schema from the schema field.
    * If the time, key, partition, or offset fields are in the configured schema, they will be removed.
    */
-  public Schema getMessageSchema() {
-    Schema schema = getSchema();
+  public Schema getMessageSchema(FailureCollector collector) {
+    Schema schema = getSchema(collector);
+    if (schema == null) {
+      return null;
+    }
     List<Schema.Field> messageFields = new ArrayList<>();
     boolean keyFieldExists = false;
     boolean partitionFieldExists = false;
@@ -190,17 +203,23 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       // if the field is not the time field and not the key field, it is a message field.
       if (fieldName.equals(keyField)) {
         if (fieldType != Schema.Type.BYTES) {
-          throw new IllegalArgumentException("The key field must be of type bytes or nullable bytes.");
+          collector.addFailure("The key field must be of type bytes or nullable bytes.", null)
+                  .withConfigProperty(KEY_FIELD)
+                  .withOutputSchemaField(keyField);
         }
         keyFieldExists = true;
       } else if (fieldName.equals(partitionField)) {
         if (fieldType != Schema.Type.INT) {
-          throw new IllegalArgumentException("The partition field must be of type int.");
+          collector.addFailure("The partition field must be of type int.", null)
+                  .withConfigProperty(PARTITION_FIELD)
+                  .withOutputSchemaField(partitionField);
         }
         partitionFieldExists = true;
       } else if (fieldName.equals(offsetField)) {
         if (fieldType != Schema.Type.LONG) {
-          throw new IllegalArgumentException("The offset field must be of type long.");
+          collector.addFailure("The offset field must be of type long.", null)
+                  .withConfigProperty(OFFSET_FIELD)
+                  .withOutputSchemaField(offsetField);
         }
         offsetFieldExists = true;
       } else {
@@ -208,20 +227,23 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       }
     }
     if (messageFields.isEmpty()) {
-      throw new IllegalArgumentException(
-        "Schema must contain at least one other field besides the time and key fields.");
+      collector.addFailure("Schema must contain at least one other field besides the time and key fields.", null)
+        .withConfigProperty(SCHEMA);
     }
     if (getKeyField() != null && !keyFieldExists) {
-      throw new IllegalArgumentException(String.format(
-        "keyField '%s' does not exist in the schema. Please add it to the schema.", keyField));
+      collector.addFailure(String.format(
+        "keyField '%s' does not exist in the schema. Please add it to the schema.", keyField), null)
+        .withConfigProperty(KEY_FIELD);
     }
     if (getPartitionField() != null && !partitionFieldExists) {
-      throw new IllegalArgumentException(String.format(
-        "partitionField '%s' does not exist in the schema. Please add it to the schema.", partitionField));
+      collector.addFailure(String.format(
+        "partitionField '%s' does not exist in the schema. Please add it to the schema.", partitionField), null)
+        .withConfigProperty(PARTITION_FIELD);
     }
     if (getOffsetField() != null && !offsetFieldExists) {
-      throw new IllegalArgumentException(String.format(
-        "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetField));
+      collector.addFailure(String.format(
+        "offsetField '%s' does not exist in the schema. Please add it to the schema.", offsetField), null)
+        .withConfigProperty(OFFSET_FIELD);
     }
     return Schema.recordOf("kafka.message", messageFields);
   }
@@ -229,14 +251,14 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   /**
    * @return broker host to broker port mapping.
    */
-  public Map<String, Integer> getBrokerMap() {
-    return parseBrokerMap(kafkaBrokers);
+  public Map<String, Integer> getBrokerMap(FailureCollector collector) {
+    return parseBrokerMap(kafkaBrokers, collector);
   }
 
   /**
    * Parses a given Kafka broker string, which is in comma separate host:port format, into a Map of host to port.
    */
-  public static Map<String, Integer> parseBrokerMap(String kafkaBrokers) {
+  public static Map<String, Integer> parseBrokerMap(String kafkaBrokers, @Nullable FailureCollector collector) {
     Map<String, Integer> brokerMap = new HashMap<>();
     for (KeyValue<String, String> hostAndPort : KeyValueListParser.DEFAULT.parse(kafkaBrokers)) {
       String host = hostAndPort.getKey();
@@ -244,12 +266,20 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       try {
         brokerMap.put(host, Integer.parseInt(portStr));
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(String.format(
-          "Invalid port '%s' for host '%s'.", portStr, host));
+        String errorMessage = String.format("Invalid port '%s' for host '%s'.", portStr, host);
+        if (collector != null) {
+          collector.addFailure(errorMessage, null).withConfigElement(KAFKA_BROKERS, host + ":" + portStr);
+        } else {
+          throw new IllegalArgumentException(errorMessage);
+        }
       }
     }
     if (brokerMap.isEmpty()) {
-      throw new IllegalArgumentException("Must specify kafka brokers.");
+      if (collector != null) {
+        collector.addFailure("Must specify kafka brokers.", null).withConfigProperty(KAFKA_BROKERS);
+      } else {
+        throw new IllegalArgumentException("Must specify kafka brokers.");
+      }
     }
     return brokerMap;
   }
@@ -257,7 +287,7 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   /**
    * Gets the partition offsets as specified by the {@link #initialPartitionOffsets} field.
    */
-  public KafkaPartitionOffsets getInitialPartitionOffsets() {
+  public KafkaPartitionOffsets getInitialPartitionOffsets(FailureCollector collector) {
     KafkaPartitionOffsets partitionOffsets = new KafkaPartitionOffsets(Collections.emptyMap());
 
     if (initialPartitionOffsets == null) {
@@ -272,16 +302,19 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       try {
         partition = Integer.parseInt(partitionStr);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(String.format(
-          "Invalid partition '%s' in initialPartitionOffsets.", partitionStr));
+        collector.addFailure(String.format("Invalid partition '%s' in initialPartitionOffsets.", partitionStr), null)
+          .withConfigElement(INITIAL_PARTITION_OFFSETS, partitionStr + ":" + offsetStr);
+        continue;
       }
 
       long offset;
       try {
         offset = Long.parseLong(offsetStr);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(String.format(
-          "Invalid offset '%s' in initialPartitionOffsets for partition %d.", partitionStr, partition));
+        collector.addFailure(String.format("Invalid offset '%s' in initialPartitionOffsets for partition %d.",
+                                           partitionStr, partition), null)
+          .withConfigElement(INITIAL_PARTITION_OFFSETS, partitionStr + ":" + offsetStr);
+        continue;
       }
 
       partitionOffsets.setPartitionOffset(partition, offset);
@@ -290,24 +323,28 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
     return partitionOffsets;
   }
 
-  public void validate() {
+  public void validate(FailureCollector collector) {
     // brokers can be null since it is macro enabled.
     if (kafkaBrokers != null) {
-      getBrokerMap();
+      getBrokerMap(collector);
     }
-    getPartitions();
-    getInitialPartitionOffsets();
+    getPartitions(collector);
+    getInitialPartitionOffsets(collector);
 
-    Schema messageSchema = getMessageSchema();
+    Schema messageSchema = getMessageSchema(collector);
+    if (messageSchema == null) {
+      return; //since parsing error would have already been added to collector
+    }
     // if format is empty, there must be just a single message field of type bytes or nullable types.
     if (Strings.isNullOrEmpty(format)) {
       List<Schema.Field> messageFields = messageSchema.getFields();
       if (messageFields.size() > 1) {
         String fieldNames = messageFields.stream().map(Schema.Field::getName).collect(Collectors.joining(","));
 
-        throw new IllegalArgumentException(String.format(
-          "Without a format, the schema must contain just a single message field of type bytes or nullable bytes. " +
-            "Found %s message fields (%s).", messageFields.size(), fieldNames));
+        collector.addFailure(String.format(
+          "Without a format, the schema must contain just a single message field of " +
+            "type bytes or nullable bytes. Found %s message fields (%s).", messageFields.size(), fieldNames), null)
+          .withConfigProperty(FORMAT);
       }
 
       Schema.Field messageField = messageFields.get(0);
@@ -315,9 +352,11 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       Schema.Type messageFieldType = messageFieldSchema.isNullable() ?
         messageFieldSchema.getNonNullable().getType() : messageFieldSchema.getType();
       if (messageFieldType != Schema.Type.BYTES) {
-        throw new IllegalArgumentException(String.format(
-          "Without a format, the message field must be of type bytes or nullable bytes, but field %s is of type %s.",
-          messageField.getName(), messageField.getSchema()));
+        collector.addFailure(String.format(
+          "Without a format, the message field must be of type bytes or nullable " +
+            "bytes, but field %s is of type %s.", messageField.getName(), messageField.getSchema()), null)
+          .withOutputSchemaField(messageField.getName())
+          .withConfigProperty(FORMAT);
       }
     } else {
       // otherwise, if there is a format, make sure we can instantiate it.
@@ -326,9 +365,9 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
       try {
         RecordFormats.createInitializedFormat(formatSpec);
       } catch (Exception e) {
-        throw new IllegalArgumentException(String.format(
-          "Unable to instantiate a message parser from format '%s' and message schema '%s': %s",
-          format, messageSchema, e.getMessage()), e);
+        collector.addFailure(String.format("Unable to instantiate a message parser from format '%s' and message " +
+                                             "schema '%s': %s", format, messageSchema, e.getMessage()), null)
+          .withConfigProperty(FORMAT);
       }
     }
   }

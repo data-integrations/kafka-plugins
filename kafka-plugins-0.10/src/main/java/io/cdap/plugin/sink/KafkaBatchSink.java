@@ -28,6 +28,7 @@ import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
 import io.cdap.cdap.etl.api.Emitter;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.cdap.etl.api.batch.BatchSinkContext;
@@ -58,6 +59,8 @@ import javax.annotation.Nullable;
 @Description("KafkaSink to write events to kafka")
 public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaBatchSink.class);
+  private static final String ASYNC = "async";
+  private static final String TOPIC = "topic";
 
   // Configuration for the plugin.
   private final Config producerConfig;
@@ -77,7 +80,8 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     super.configurePipeline(pipelineConfigurer);
 
-    producerConfig.validate();
+    producerConfig.validate(pipelineConfigurer.getStageConfigurer().getFailureCollector());
+    pipelineConfigurer.getStageConfigurer().getFailureCollector().getOrThrowException();
   }
 
   @Override
@@ -135,35 +139,42 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
    */
   public static class Config extends ReferencePluginConfig {
 
-    @Name("brokers")
+    private static final String BROKERS = "brokers";
+    private static final String KEY = "key";
+    private static final String TOPIC = KafkaBatchSink.TOPIC;
+    private static final String FORMAT = "format";
+    private static final String KAFKA_PROPERTIES = "kafkaProperties";
+    private static final String COMPRESSION_TYPE = "compressionType";
+
+    @Name(BROKERS)
     @Description("Specifies the connection string where Producer can find one or more brokers to " +
       "determine the leader for each topic")
     @Macro
     private String brokers;
 
-    @Name("async")
+    @Name(ASYNC)
     @Description("Specifies whether an acknowledgment is required from broker that message was received. " +
       "Default is FALSE")
     @Macro
     private String async;
 
-    @Name("key")
+    @Name(KEY)
     @Description("Specify the key field to be used in the message. Only String Partitioner is supported.")
     @Macro
     @Nullable
     private String key;
 
-    @Name("topic")
+    @Name(TOPIC)
     @Description("Topic to which message needs to be published")
     @Macro
     private String topic;
 
-    @Name("format")
+    @Name(FORMAT)
     @Description("Format a structured record should be converted to")
     @Macro
     private String format;
 
-    @Name("kafkaProperties")
+    @Name(KAFKA_PROPERTIES)
     @Description("Additional kafka producer properties to set")
     @Macro
     @Nullable
@@ -179,7 +190,7 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
     @Nullable
     private String keytabLocation;
 
-    @Name("compressionType")
+    @Name(COMPRESSION_TYPE)
     @Description("Compression type to be applied on message")
     @Macro
     private String compressionType;
@@ -196,21 +207,23 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
       this.compressionType = compressionType;
     }
 
-    private void validate() {
+    private void validate(FailureCollector collector) {
       if (!async.equalsIgnoreCase("true") && !async.equalsIgnoreCase("false")) {
-        throw new IllegalArgumentException("Async flag has to be either TRUE or FALSE.");
+        collector.addFailure("Async flag has to be either TRUE or FALSE.", null)
+                .withConfigProperty(ASYNC);
       }
 
-      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation, collector);
     }
   }
 
   private static class KafkaOutputFormatProvider implements OutputFormatProvider {
+    public static final String HAS_KEY = "hasKey";
     private final Map<String, String> conf;
 
     KafkaOutputFormatProvider(Config kafkaSinkConfig) {
       this.conf = new HashMap<>();
-      conf.put("topic", kafkaSinkConfig.topic);
+      conf.put(TOPIC, kafkaSinkConfig.topic);
 
       conf.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaSinkConfig.brokers);
       conf.put("compression.type", kafkaSinkConfig.compressionType);
@@ -220,13 +233,13 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
       KafkaHelpers.setupKerberosLogin(conf, kafkaSinkConfig.principal, kafkaSinkConfig.keytabLocation);
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
 
-      conf.put("async", kafkaSinkConfig.async);
+      conf.put(ASYNC, kafkaSinkConfig.async);
       if (kafkaSinkConfig.async.equalsIgnoreCase("true")) {
         conf.put(ACKS_REQUIRED, "1");
       }
 
       if (!Strings.isNullOrEmpty(kafkaSinkConfig.key)) {
-        conf.put("hasKey", kafkaSinkConfig.key);
+        conf.put(HAS_KEY, kafkaSinkConfig.key);
       }
     }
 

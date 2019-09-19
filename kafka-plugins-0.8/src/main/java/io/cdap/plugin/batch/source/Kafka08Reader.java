@@ -65,7 +65,8 @@ final class Kafka08Reader implements KafkaReader {
 
     // read data from queue
     Map<String, String> conf = request.getConf();
-    Broker leader = getLeader(KafkaBatchConfig.parseBrokerMap(conf.get(KafkaInputFormat.KAFKA_BROKERS)),
+    //no failureCollector is available here
+    Broker leader = getLeader(KafkaBatchConfig.parseBrokerMap(conf.get(KafkaInputFormat.KAFKA_BROKERS), null),
                               request.getTopic(), request.getPartition());
     this.simpleConsumer = new SimpleConsumer(leader.host(), leader.port(), 20 * 1000, fetchBufferSize, "client");
   }
