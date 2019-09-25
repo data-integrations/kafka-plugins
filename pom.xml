@@ -122,6 +122,16 @@
       <version>${cdap.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.cdap.plugin</groupId>
+      <artifactId>format-common</artifactId>
+      <version>${cdap.plugin.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.plugin</groupId>
+      <artifactId>format-avro</artifactId>
+      <version>${cdap.plugin.version}</version>
+    </dependency>
+    <dependency>
       <groupId>io.cdap.cdap</groupId>
       <artifactId>hydrator-test</artifactId>
       <version>${cdap.version}</version>

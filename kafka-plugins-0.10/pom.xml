@@ -20,6 +20,16 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.cdap.plugin</groupId>
+      <artifactId>format-common</artifactId>
+      <version>${cdap.plugin.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.plugin</groupId>
+      <artifactId>format-avro</artifactId>
+      <version>${cdap.plugin.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.11</artifactId>
       <version>${kafka10.version}</version>
