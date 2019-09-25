@@ -29,7 +29,9 @@ import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
 import io.cdap.cdap.common.io.ByteBuffers;
 import io.cdap.cdap.etl.api.Emitter;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
+import io.cdap.cdap.etl.api.StageConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchRuntimeContext;
 import io.cdap.cdap.etl.api.batch.BatchSource;
 import io.cdap.cdap.etl.api.batch.BatchSourceContext;
@@ -53,6 +55,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -122,9 +125,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return conf;
     }
 
-    public void validate() {
-      super.validate();
-      KafkaHelpers.validateKerberosSetting(principal, keytabLocation);
+    public void validate(FailureCollector collector) {
+      super.validate(collector);
+      KafkaHelpers.validateKerberosSetting(principal, keytabLocation, collector);
     }
   }
 
@@ -134,8 +137,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    config.validate();
-    pipelineConfigurer.getStageConfigurer().setOutputSchema(config.getSchema());
+    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+    FailureCollector failureCollector = stageConfigurer.getFailureCollector();
+    config.validate(failureCollector);
+    stageConfigurer.setOutputSchema(config.getSchema(failureCollector));
+    failureCollector.getOrThrowException();
   }
 
   @Override
@@ -143,7 +149,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     Job job = JobUtils.createInstance();
     Configuration conf = job.getConfiguration();
 
-    KafkaPartitionOffsets partitionOffsets = config.getInitialPartitionOffsets();
+    FailureCollector failureCollector = context.getFailureCollector();
+    KafkaPartitionOffsets partitionOffsets = config.getInitialPartitionOffsets(failureCollector);
+    Schema schema = config.getSchema(failureCollector);
+    Set<Integer> partitions = config.getPartitions(failureCollector);
+    failureCollector.getOrThrowException();
 
     // If the offset directory is provided, try to load the file
     if (!context.isPreviewEnabled() && config.getOffsetDir() != null) {
@@ -167,10 +177,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     KafkaHelpers.setupKerberosLogin(kafkaConf, config.getPrincipal(), config.getKeytabLocation());
     kafkaConf.putAll(config.getKafkaProperties());
     kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), kafkaConf,
-                                                       config.getPartitions(), config.getMaxNumberRecords(),
+                                                       partitions,
+                                                       config.getMaxNumberRecords(),
                                                        partitionOffsets);
     LineageRecorder lineageRecorder = new LineageRecorder(context, config.referenceName);
-    Schema schema = config.getSchema();
+
     if (schema != null) {
       lineageRecorder.createExternalDataset(schema);
       if (schema.getFields() != null && !schema.getFields().isEmpty()) {
@@ -203,8 +214,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   public void initialize(BatchRuntimeContext context) throws Exception {
     super.initialize(context);
 
-    schema = config.getSchema();
-    Schema messageSchema = config.getMessageSchema();
+    schema = config.getSchema(context.getFailureCollector());
+    Schema messageSchema = config.getMessageSchema(context.getFailureCollector());
+    if (schema == null || messageSchema == null) {
+      return;
+    }
     for (Schema.Field field : schema.getFields()) {
       String name = field.getName();
       if (!name.equals(config.getKeyField()) && !name.equals(config.getPartitionField()) &&

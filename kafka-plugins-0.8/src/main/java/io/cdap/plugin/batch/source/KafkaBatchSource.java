@@ -27,7 +27,9 @@ import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
 import io.cdap.cdap.common.io.ByteBuffers;
 import io.cdap.cdap.etl.api.Emitter;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
+import io.cdap.cdap.etl.api.StageConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchRuntimeContext;
 import io.cdap.cdap.etl.api.batch.BatchSource;
 import io.cdap.cdap.etl.api.batch.BatchSourceContext;
@@ -47,6 +49,8 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -73,8 +77,10 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    config.validate();
-    pipelineConfigurer.getStageConfigurer().setOutputSchema(config.getSchema());
+    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+    config.validate(stageConfigurer.getFailureCollector());
+    stageConfigurer.setOutputSchema(config.getSchema(stageConfigurer.getFailureCollector()));
+    stageConfigurer.getFailureCollector().getOrThrowException();
   }
 
   @Override
@@ -82,7 +88,12 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     Job job = JobUtils.createInstance();
     Configuration conf = job.getConfiguration();
 
-    KafkaPartitionOffsets partitionOffsets = config.getInitialPartitionOffsets();
+    FailureCollector failureCollector = context.getFailureCollector();
+    KafkaPartitionOffsets partitionOffsets = config.getInitialPartitionOffsets(failureCollector);
+    Map<String, Integer> brokerMap = config.getBrokerMap(failureCollector);
+    Set<Integer> partitions = config.getPartitions(failureCollector);
+    Schema schema = config.getSchema(failureCollector);
+    failureCollector.getOrThrowException();
 
     // If the offset directory is provided, try to load the file
     if (!context.isPreviewEnabled() && config.getOffsetDir() != null) {
@@ -98,12 +109,9 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       // Load the offset from the offset file
       partitionOffsets = KafkaPartitionOffsets.load(fileContext, offsetsFile);
     }
-
-    kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), config.getBrokerMap(),
-                                                       config.getPartitions(), config.getMaxNumberRecords(),
-                                                       partitionOffsets);
+    kafkaRequests = KafkaInputFormat.saveKafkaRequests(conf, config.getTopic(), brokerMap, partitions,
+                                                       config.getMaxNumberRecords(), partitionOffsets);
     LineageRecorder lineageRecorder = new LineageRecorder(context, config.referenceName);
-    Schema schema = config.getSchema();
     if (schema != null) {
       lineageRecorder.createExternalDataset(schema);
       if (schema.getFields() != null && !schema.getFields().isEmpty()) {
@@ -135,8 +143,11 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   @Override
   public void initialize(BatchRuntimeContext context) throws Exception {
     super.initialize(context);
-    schema = config.getSchema();
-    Schema messageSchema = config.getMessageSchema();
+    schema = config.getSchema(context.getFailureCollector());
+    Schema messageSchema = config.getMessageSchema(context.getFailureCollector());
+    if (schema == null || messageSchema == null) {
+      return;
+    }
     for (Schema.Field field : schema.getFields()) {
       String name = field.getName();
       if (!name.equals(config.getKeyField()) && !name.equals(config.getPartitionField()) &&
