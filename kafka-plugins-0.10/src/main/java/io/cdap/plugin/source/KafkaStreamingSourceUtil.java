@@ -62,8 +62,8 @@ import java.util.Set;
  * This class contains methods for {@link KafkaStreamingSource} that require spark classes because during validation
  * spark classes are not available. Refer CDAP-15912 for more information.
  */
-final class KafkaStreaminSourceUtil {
-  private static final Logger LOG = LoggerFactory.getLogger(KafkaStreaminSourceUtil.class);
+final class KafkaStreamingSourceUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaStreamingSourceUtil.class);
 
   /**
    * Returns {@link JavaDStream} for {@link KafkaStreamingSource}.
@@ -284,7 +284,7 @@ final class KafkaStreaminSourceUtil {
     }
   }
 
-  private KafkaStreaminSourceUtil() {
+  private KafkaStreamingSourceUtil() {
     // no-op
   }
 }

@@ -20,14 +20,9 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.cdap.plugin</groupId>
-      <artifactId>format-common</artifactId>
-      <version>${cdap.plugin.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.cdap.plugin</groupId>
-      <artifactId>format-avro</artifactId>
-      <version>${cdap.plugin.version}</version>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>${avro.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>

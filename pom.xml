@@ -84,6 +84,7 @@
     <hadoop.version>2.3.0</hadoop.version>
     <netty.version>4.1.16.Final</netty.version>
     <netty-http.version>1.3.0</netty-http.version>
+    <avro.version>1.8.2</avro.version>
     <main.basedir>${project.basedir}</main.basedir>
   </properties>
 
@@ -120,16 +121,6 @@
       <groupId>io.cdap.cdap</groupId>
       <artifactId>cdap-formats</artifactId>
       <version>${cdap.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.cdap.plugin</groupId>
-      <artifactId>format-common</artifactId>
-      <version>${cdap.plugin.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.cdap.plugin</groupId>
-      <artifactId>format-avro</artifactId>
-      <version>${cdap.plugin.version}</version>
     </dependency>
     <dependency>
       <groupId>io.cdap.cdap</groupId>

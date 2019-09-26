@@ -69,6 +69,6 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     collector.getOrThrowException();
 
     context.registerLineage(conf.referenceName);
-    return KafkaStreaminSourceUtil.getStructuredRecordJavaDStream(context, conf, collector);
+    return KafkaStreamingSourceUtil.getStructuredRecordJavaDStream(context, conf, collector);
   }
 }
