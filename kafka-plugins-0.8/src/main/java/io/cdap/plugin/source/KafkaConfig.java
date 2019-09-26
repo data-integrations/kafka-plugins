@@ -17,7 +17,6 @@
 package io.cdap.plugin.source;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import io.cdap.cdap.api.annotation.Description;
@@ -25,6 +24,7 @@ import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.data.format.FormatSpecification;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.format.RecordFormats;
 import io.cdap.plugin.common.KeyValueListParser;
 import io.cdap.plugin.common.ReferencePluginConfig;
@@ -45,6 +45,17 @@ import javax.annotation.Nullable;
  */
 @SuppressWarnings("unused")
 public class KafkaConfig extends ReferencePluginConfig implements Serializable {
+  private static final String NAME_SCHEMA = "schema";
+  private static final String NAME_BROKERS = "brokers";
+  private static final String NAME_PARTITIONS = "partitions";
+  private static final String NAME_MAX_RATE = "maxRatePerPartition";
+  private static final String NAME_INITIAL_PARTITION_OFFSETS = "initialPartitionOffsets";
+  private static final String NAME_TIMEFIELD = "timeField";
+  private static final String NAME_KEYFIELD = "keyField";
+  private static final String NAME_PARTITION_FIELD = "partitionField";
+  private static final String NAME_OFFSET_FIELD = "offsetField";
+  private static final String NAME_FORMAT = "format";
+  private static final String SEPARATOR = ":";
 
   private static final long serialVersionUID = 8069169417140954175L;
 
@@ -185,12 +196,23 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     return maxRatePerPartition;
   }
 
+  @Nullable
   public Schema getSchema() {
     try {
       return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
     } catch (IOException e) {
-      throw new IllegalArgumentException("Unable to parse schema: " + e.getMessage());
+      throw new IllegalArgumentException("Invalid schema : " + e.getMessage());
     }
+  }
+
+  @Nullable
+  public Schema getSchema(FailureCollector collector) {
+    try {
+      return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
+    } catch (IOException e) {
+      collector.addFailure("Invalid schema : " + e.getMessage(), null).withConfigProperty(NAME_SCHEMA);
+    }
+    throw collector.getOrThrowException();
   }
 
   // gets the message schema from the schema field. If the time, key, partition, or offset fields are in the configured
@@ -205,26 +227,27 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
 
     for (Schema.Field field : schema.getFields()) {
       String fieldName = field.getName();
-      Schema fieldSchema = field.getSchema();
-      Schema.Type fieldType = fieldSchema.isNullable() ? fieldSchema.getNonNullable().getType() : fieldSchema.getType();
+      Schema fieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
+      Schema.Type fieldType = fieldSchema.getType();
+
       // if the field is not the time field and not the key field, it is a message field.
       if (fieldName.equals(timeField)) {
-        if (fieldType != Schema.Type.LONG) {
+        if (fieldType != Schema.Type.LONG || fieldSchema.getLogicalType() != null) {
           throw new IllegalArgumentException("The time field must be of type long or nullable long.");
         }
         timeFieldExists = true;
       } else if (fieldName.equals(keyField)) {
-        if (fieldType != Schema.Type.BYTES) {
+        if (fieldType != Schema.Type.BYTES || fieldSchema.getLogicalType() != null) {
           throw new IllegalArgumentException("The key field must be of type bytes or nullable bytes.");
         }
         keyFieldExists = true;
       } else if (fieldName.equals(partitionField)) {
-        if (fieldType != Schema.Type.INT) {
+        if (fieldType != Schema.Type.INT || fieldSchema.getLogicalType() != null) {
           throw new IllegalArgumentException("The partition field must be of type int.");
         }
         partitionFieldExists = true;
       } else if (fieldName.equals(offsetField)) {
-        if (fieldType != Schema.Type.LONG) {
+        if (fieldType != Schema.Type.LONG || fieldSchema.getLogicalType() != null) {
           throw new IllegalArgumentException("The offset field must be of type long.");
         }
         offsetFieldExists = true;
@@ -256,14 +279,85 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     return Schema.recordOf("kafka.message", messageFields);
   }
 
+  // gets the message schema from the schema field. If the time, key, partition, or offset fields are in the configured
+  // schema, they will be removed.
+  public Schema getMessageSchema(FailureCollector collector) {
+    Schema schema = getSchema(collector);
+    List<Schema.Field> messageFields = new ArrayList<>();
+    boolean timeFieldExists = false;
+    boolean keyFieldExists = false;
+    boolean partitionFieldExists = false;
+    boolean offsetFieldExists = false;
+
+    for (Schema.Field field : schema.getFields()) {
+      String fieldName = field.getName();
+      Schema fieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
+      Schema.Type fieldType = fieldSchema.getType();
+
+      // if the field is not the time field and not the key field, it is a message field.
+      if (fieldName.equals(timeField)) {
+        if (fieldType != Schema.Type.LONG || fieldSchema.getLogicalType() != null) {
+          collector.addFailure("The time field must be of type long or nullable long.", null)
+            .withConfigProperty(NAME_TIMEFIELD).withOutputSchemaField(timeField);
+        }
+        timeFieldExists = true;
+      } else if (fieldName.equals(keyField)) {
+        if (fieldType != Schema.Type.BYTES || fieldSchema.getLogicalType() != null) {
+          collector.addFailure("The key field must be of type bytes or nullable bytes.", null)
+            .withConfigProperty(NAME_KEYFIELD).withOutputSchemaField(keyField);
+        }
+        keyFieldExists = true;
+      } else if (fieldName.equals(partitionField)) {
+        if (fieldType != Schema.Type.INT || fieldSchema.getLogicalType() != null) {
+          collector.addFailure("The partition field must be of type int.", null)
+            .withConfigProperty(NAME_PARTITION_FIELD).withOutputSchemaField(partitionField);
+        }
+        partitionFieldExists = true;
+      } else if (fieldName.equals(offsetField)) {
+        if (fieldType != Schema.Type.LONG || fieldSchema.getLogicalType() != null) {
+          collector.addFailure("The offset field must be of type long.", null)
+            .withConfigProperty(NAME_OFFSET_FIELD).withOutputSchemaField(offsetField);
+        }
+        offsetFieldExists = true;
+      } else {
+        messageFields.add(field);
+      }
+    }
+
+    if (getTimeField() != null && !timeFieldExists) {
+      collector.addFailure(String.format("Time field '%s' must exist in schema.", timeField), null)
+        .withConfigProperty(NAME_TIMEFIELD);
+    }
+    if (getKeyField() != null && !keyFieldExists) {
+      collector.addFailure(String.format("Key field '%s' must exist in schema.", keyField), null)
+        .withConfigProperty(NAME_KEYFIELD);
+    }
+    if (getPartitionField() != null && !partitionFieldExists) {
+      collector.addFailure(String.format("Partition field '%s' must exist in schema.", partitionField), null)
+        .withConfigProperty(NAME_PARTITION_FIELD);
+    }
+    if (getOffsetField() != null && !offsetFieldExists) {
+      collector.addFailure(String.format("Offset field '%s' must exist in schema.", offsetField), null)
+        .withConfigProperty(NAME_OFFSET_FIELD);
+    }
+
+    if (messageFields.isEmpty()) {
+      collector.addFailure("Schema must contain at least one other field besides the time and key fields.", null);
+      throw collector.getOrThrowException();
+    }
+    return Schema.recordOf("kafka.message", messageFields);
+  }
+
   /**
    * Get the initial partition offsets for the specified partitions. If an initial offset is specified in the
    * initialPartitionOffsets property, that value will be used. Otherwise, the defaultInitialOffset will be used.
    *
    * @param partitionsToRead the partitions to read
+   * @param collector failure collector
    * @return initial partition offsets.
    */
-  public Map<TopicAndPartition, Long> getInitialPartitionOffsets(Set<Integer> partitionsToRead) {
+  public Map<TopicAndPartition, Long> getInitialPartitionOffsets(Set<Integer> partitionsToRead,
+                                                                 FailureCollector collector) {
     Map<TopicAndPartition, Long> partitionOffsets = new HashMap<>();
 
     // set default initial partitions
@@ -280,15 +374,21 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
         try {
           partition = Integer.parseInt(partitionStr);
         } catch (NumberFormatException e) {
-          throw new IllegalArgumentException(String.format(
-            "Invalid partition '%s' in initialPartitionOffsets.", partitionStr));
+          collector.addFailure(
+            String.format("Invalid partition '%s' in initialPartitionOffsets.", partitionStr),
+            "Partition must be a valid integer.")
+            .withConfigElement(NAME_INITIAL_PARTITION_OFFSETS, partitionStr + SEPARATOR + offsetStr);
+          continue;
         }
         long offset;
         try {
           offset = Long.parseLong(offsetStr);
         } catch (NumberFormatException e) {
-          throw new IllegalArgumentException(String.format(
-            "Invalid offset '%s' in initialPartitionOffsets for partition %d.", partitionStr, partition));
+          collector.addFailure(
+            String.format("Invalid offset '%s' in initialPartitionOffsets for partition %d.", offsetStr, partition),
+            "Offset muse be a valid integer.")
+            .withConfigElement(NAME_INITIAL_PARTITION_OFFSETS, partitionStr + SEPARATOR + offsetStr);
+          continue;
         }
         partitionOffsets.put(new TopicAndPartition(topic, partition), offset);
       }
@@ -300,20 +400,26 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   /**
    * @return broker host to broker port mapping.
    */
-  public Map<String, Integer> getBrokerMap() {
+  public Map<String, Integer> getBrokerMap(FailureCollector collector) {
     Map<String, Integer> brokerMap = new HashMap<>();
-    for (KeyValue<String, String> hostAndPort : KeyValueListParser.DEFAULT.parse(brokers)) {
-      String host = hostAndPort.getKey();
-      String portStr = hostAndPort.getValue();
-      try {
-        brokerMap.put(host, Integer.parseInt(portStr));
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(String.format(
-          "Invalid port '%s' for host '%s'.", portStr, host));
+    try {
+      for (KeyValue<String, String> hostAndPort : KeyValueListParser.DEFAULT.parse(brokers)) {
+        String host = hostAndPort.getKey();
+        String portStr = hostAndPort.getValue();
+        try {
+          brokerMap.put(host, Integer.parseInt(portStr));
+        } catch (NumberFormatException e) {
+          collector.addFailure(String.format("Invalid port '%s' for host '%s'.", portStr, host),
+                               "It should be a valid port number.")
+            .withConfigElement(NAME_BROKERS, host + SEPARATOR + portStr);
+        }
       }
+    } catch (IllegalArgumentException e) {
+      // no-op
     }
     if (brokerMap.isEmpty()) {
-      throw new IllegalArgumentException("Must specify kafka brokers.");
+      collector.addFailure("Kafka brokers must be provided in host:port format.", null)
+        .withConfigProperty(NAME_BROKERS);
     }
     return brokerMap;
   }
@@ -321,73 +427,82 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   /**
    * @return set of partitions to read from. Returns an empty list if no partitions were specified.
    */
-  public Set<Integer> getPartitions() {
+  public Set<Integer> getPartitions(FailureCollector collector) {
     Set<Integer> partitionSet = new HashSet<>();
-    if (partitions == null) {
+    if (Strings.isNullOrEmpty(partitions)) {
       return partitionSet;
     }
     for (String partition : Splitter.on(',').trimResults().split(partitions)) {
       try {
         partitionSet.add(Integer.parseInt(partition));
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(
-          String.format("Invalid partition '%s'. Partitions must be integers.", partition));
+        collector.addFailure(String.format("Invalid partition '%s'.", partition), "Partitions must be integers.")
+          .withConfigElement(NAME_PARTITIONS, partition);
       }
     }
     return partitionSet;
   }
 
-  public void validate() {
+  public void validate(FailureCollector collector) {
     // brokers can be null since it is macro enabled.
     if (brokers != null) {
-      getBrokerMap();
+      getBrokerMap(collector);
     }
-    getPartitions();
-    getInitialPartitionOffsets(getPartitions());
+    Set<Integer> partitions = getPartitions(collector);
+    getInitialPartitionOffsets(partitions, collector);
+
+    if (maxRatePerPartition == null) {
+      collector.addFailure("Max rate per partition must be provided.", null)
+        .withConfigProperty(NAME_MAX_RATE);
+    }
 
     if (maxRatePerPartition < 0) {
-      throw new IllegalArgumentException(String.format("Invalid maxRatePerPartition %d. Rate must be 0 or greater.",
-                                                       maxRatePerPartition));
+      collector.addFailure(String.format("Invalid maxRatePerPartition '%d'.", maxRatePerPartition),
+                           "Rate must be 0 or greater.").withConfigProperty(NAME_MAX_RATE);
     }
 
     if (!Strings.isNullOrEmpty(timeField) && !Strings.isNullOrEmpty(keyField) && timeField.equals(keyField)) {
-      throw new IllegalArgumentException(String.format(
-        "The timeField and keyField cannot both have the same name (%s).", timeField));
+      collector.addFailure(String.format(
+        "The timeField and keyField cannot both have the same name (%s).", timeField), null)
+        .withConfigProperty(NAME_TIMEFIELD).withConfigProperty(NAME_KEYFIELD);
     }
 
-    Schema messageSchema = getMessageSchema();
+    Schema messageSchema = getMessageSchema(collector);
     // if format is empty, there must be just a single message field of type bytes or nullable types.
     if (Strings.isNullOrEmpty(format)) {
       List<Schema.Field> messageFields = messageSchema.getFields();
       if (messageFields.size() > 1) {
         List<String> fieldNames = new ArrayList<>();
         for (Schema.Field messageField : messageFields) {
-          fieldNames.add(messageField.getName());
+          collector.addFailure(
+            "Without a format, the schema must contain just a single message field of type bytes or nullable bytes.",
+            String.format("Remove field '%s'.", messageField.getName()))
+            .withOutputSchemaField(messageField.getName()).withConfigProperty(NAME_FORMAT);
         }
-        throw new IllegalArgumentException(String.format(
-          "Without a format, the schema must contain just a single message field of type bytes or nullable bytes. " +
-            "Found %s message fields (%s).", messageFields.size(), Joiner.on(',').join(fieldNames)));
+        return;
       }
 
       Schema.Field messageField = messageFields.get(0);
-      Schema messageFieldSchema = messageField.getSchema();
-      Schema.Type messageFieldType = messageFieldSchema.isNullable() ?
-        messageFieldSchema.getNonNullable().getType() : messageFieldSchema.getType();
-      if (messageFieldType != Schema.Type.BYTES) {
-        throw new IllegalArgumentException(String.format(
-          "Without a format, the message field must be of type bytes or nullable bytes, but field %s is of type %s.",
-          messageField.getName(), messageField.getSchema()));
+      Schema messageFieldSchema = messageField.getSchema().isNullable() ? messageField.getSchema().getNonNullable() :
+        messageField.getSchema();
+      Schema.Type messageFieldType = messageFieldSchema.getType();
+      if (messageFieldType != Schema.Type.BYTES || messageFieldSchema.getLogicalType() != null) {
+        collector.addFailure(
+          String.format("Without a format, the message field must be of type bytes or nullable bytes, " +
+                          "but field %s is of type %s.",
+                        messageField.getName(), messageField.getSchema().getDisplayName()), null)
+          .withOutputSchemaField(messageField.getName()).withConfigProperty(NAME_FORMAT);
       }
     } else {
       // otherwise, if there is a format, make sure we can instantiate it.
-      FormatSpecification formatSpec = new FormatSpecification(format, messageSchema, new HashMap<String, String>());
+      FormatSpecification formatSpec = new FormatSpecification(format, messageSchema, new HashMap<>());
 
       try {
         RecordFormats.createInitializedFormat(formatSpec);
       } catch (Exception e) {
-        throw new IllegalArgumentException(String.format(
-          "Unable to instantiate a message parser from format '%s' and message schema '%s': %s",
-          format, messageSchema, e.getMessage()), e);
+        collector.addFailure(String.format(
+          "Unable to instantiate a message parser from format '%s': %s",
+          format, e.getMessage()), null).withStacktrace(e.getStackTrace()).withConfigProperty(NAME_FORMAT);
       }
     }
   }

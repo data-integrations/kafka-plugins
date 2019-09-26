@@ -20,6 +20,11 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>${avro.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.11</artifactId>
       <version>${kafka10.version}</version>
@@ -182,8 +187,8 @@
         <version>1.1.0</version>
         <configuration>
           <cdapArtifacts>
-            <parent>system:cdap-data-pipeline[6.0.0,7.0.0-SNAPSHOT)</parent>
-            <parent>system:cdap-data-streams[6.0.0,7.0.0-SNAPSHOT)</parent>
+            <parent>system:cdap-data-pipeline[6.1.0-SNAPSHOT,7.0.0-SNAPSHOT)</parent>
+            <parent>system:cdap-data-streams[6.1.0-SNAPSHOT,7.0.0-SNAPSHOT)</parent>
           </cdapArtifacts>
         </configuration>
         <executions>

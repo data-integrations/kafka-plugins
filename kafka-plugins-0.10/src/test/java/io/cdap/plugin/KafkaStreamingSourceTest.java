@@ -67,7 +67,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -181,19 +180,14 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
     final DataSetManager<Table> outputManager = getDataset("kafkaOutput");
     Tasks.waitFor(
       ImmutableMap.of(1L, "samuel jackson", 2L, "dwayne johnson", 3L, "christopher walken"),
-      new Callable<Map<Long, String>>() {
-        @Override
-        public Map<Long, String> call() throws Exception {
-          outputManager.flush();
-          Map<Long, String> actual = new HashMap<>();
-          for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
-            actual.put((Long) outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
-          }
-          return actual;
+      () -> {
+        outputManager.flush();
+        Map<Long, String> actual = new HashMap<>();
+        for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
+          actual.put(outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
         }
-      },
-      2,
-      TimeUnit.MINUTES);
+        return actual;
+      }, 2, TimeUnit.MINUTES);
 
     sparkManager.stop();
     sparkManager.waitForStatus(false, 10, 1);
@@ -212,19 +206,14 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
 
     Tasks.waitFor(
       ImmutableMap.of(4L, "terry crews", 5L, "sylvester stallone"),
-      new Callable<Map<Long, String>>() {
-        @Override
-        public Map<Long, String> call() throws Exception {
-          outputManager.flush();
-          Map<Long, String> actual = new HashMap<>();
-          for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
-            actual.put((Long) outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
-          }
-          return actual;
+      () -> {
+        outputManager.flush();
+        Map<Long, String> actual = new HashMap<>();
+        for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
+          actual.put(outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
         }
-      },
-      2,
-      TimeUnit.MINUTES);
+        return actual;
+      }, 2, TimeUnit.MINUTES);
 
     sparkManager.stop();
   }
@@ -261,6 +250,4 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
       }
     } while (count++ < 20);
   }
-
-
 }
