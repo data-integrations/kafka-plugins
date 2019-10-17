@@ -17,6 +17,7 @@
 package io.cdap.plugin.common;
 
 import com.google.common.base.Strings;
+import io.cdap.cdap.etl.api.FailureCollector;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
@@ -33,6 +34,8 @@ import javax.annotation.Nullable;
 public final class KafkaHelpers {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaHelpers.class);
   public static final String SASL_JAAS_CONFIG = "sasl.jaas.config";
+  public static final String PRINCIPAL = "principal";
+  public static final String KEYTAB = "keytab";
 
   // This class cannot be instantiated
   private KafkaHelpers() {
@@ -113,11 +116,28 @@ public final class KafkaHelpers {
    */
   public static void validateKerberosSetting(@Nullable String principal, @Nullable String keytab) {
     if (Strings.isNullOrEmpty(principal) != Strings.isNullOrEmpty(keytab)) {
-      String emptyField = Strings.isNullOrEmpty(principal) ? "principal" : "keytab";
+      String emptyField = Strings.isNullOrEmpty(principal) ? PRINCIPAL : KEYTAB;
       String message = emptyField + " is empty. When Kerberos security is enabled for Kafka, " +
               "then both the principal and the keytab have " +
               "to be specified. If Kerberos is not enabled, then both should be empty.";
       throw new IllegalArgumentException(message);
+    }
+  }
+
+  /**
+   * Validates whether the principal and keytab are both set or both of them are null/empty.
+   * Stores the result in the provided failureCollector.
+   *
+   * @param principal Kerberos principal
+   * @param keytab Kerberos keytab for the principal
+   * @param collector input failureCollector into which the error will be added if present
+   */
+  public static void validateKerberosSetting(@Nullable String principal, @Nullable String keytab,
+                                             FailureCollector collector) {
+    if (Strings.isNullOrEmpty(principal) != Strings.isNullOrEmpty(keytab)) {
+      String emptyField = Strings.isNullOrEmpty(principal) ? PRINCIPAL : KEYTAB;
+      String message = "Field " + emptyField + " must be specified.";
+      collector.addFailure(message, null).withConfigProperty(emptyField);
     }
   }
 }
