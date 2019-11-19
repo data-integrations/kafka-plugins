@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "spec-version": "1.5"
+  },
+  "display-name": "Confluent Kafka",
+  "configuration-groups": [
+    {
+      "label": "Kafka Configuration",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Reference Name",
+          "name": "referenceName"
+        },
+        {
+          "widget-type": "csv",
+          "label": "Kafka Brokers",
+          "name": "brokers",
+          "widget-attributes": {
+            "delimiter": ","
+          }
+        },
+        {
+          "widget-type": "connection-browser",
+          "widget-category": "plugin",
+          "widget-attributes": {
+            "connectionType": "KAFKA",
+            "label": "Browse"
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Kafka Topic",
+          "name": "topic"
+        },
+        {
+          "widget-type": "csv",
+          "label": "Topic Partitions",
+          "name": "partitions",
+          "widget-attributes": {
+            "delimiter": ","
+          }
+        },
+        {
+          "widget-type": "number",
+          "label": "Default Initial Offset",
+          "name": "defaultInitialOffset",
+          "widget-attributes": {
+            "default": -1
+          }
+        },
+        {
+          "widget-type": "keyvalue",
+          "label": "Initial Partition Offsets",
+          "name": "initialPartitionOffsets",
+          "widget-attributes": {
+            "showDelimiter": "false",
+            "key-placeholder": "Partition",
+            "value-placeholder": "Offset"
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Time Field",
+          "name": "timeField"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Key Field",
+          "name": "keyField"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Partition Field",
+          "name": "partitionField"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Offset Field",
+          "name": "offsetField"
+        },
+        {
+          "widget-type": "number",
+          "label": "Max Rate Per Partition",
+          "name": "maxRatePerPartition",
+          "widget-attributes": {
+            "default": 1000
+          }
+        },
+        {
+          "widget-type": "keyvalue",
+          "label": "Additional Kafka Consumer Properties",
+          "name": "kafkaProperties",
+          "widget-attributes": {
+            "showDelimiter": "false",
+            "key-placeholder": "Kafka consumer property",
+            "value-placeholder": "Kafka consumer property value"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Authentication",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Cluster API Key",
+          "name": "clusterApiKey"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Cluster API Secret",
+          "name": "clusterApiSecret"
+        }
+      ]
+    },
+    {
+      "label": "Schema Registry",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Schema Registry URL",
+          "name": "schemaRegistryUrl"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Schema Registry API Key",
+          "name": "schemaRegistryApiKey"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Schema Registry API Secret",
+          "name": "schemaRegistryApiSecret"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Value Field",
+          "name": "valueField",
+          "plugin-function": {
+            "label": "Get Schema",
+            "widget": "outputSchema",
+            "position": "bottom",
+            "multiple-inputs": false,
+            "button-class": "btn-hydrator"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Message Configuration",
+      "properties": [
+        {
+          "widget-type": "select",
+          "label": "Message Format",
+          "name": "format",
+          "widget-attributes": {
+            "values": [
+              "",
+              "avro",
+              "binary",
+              "clf",
+              "csv",
+              "grok",
+              "syslog",
+              "text",
+              "tsv"
+            ],
+            "default": ""
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "schema",
+      "widget-type": "schema",
+      "widget-attributes": {
+        "default-schema": {
+          "name": "etlSchemaBody",
+          "type": "record",
+          "fields": [
+            {
+              "name": "message",
+              "type": "string"
+            }
+          ]
+        },
+        "schema-default-type": "string",
+        "property-watch": "format"
+      }
+    }
+  ],
+  "jump-config": {
+    "datasets": [
+      {
+        "ref-property-name": "referenceName"
+      }
+    ]
+  }
+}

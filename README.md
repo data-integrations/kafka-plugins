@@ -26,6 +26,22 @@ To build this plugin:
 The build will create a .jar and .json file under the ``target`` directory.
 These files can be used to deploy your plugins.
 
+Run tests
+-----
+To run all tests:
+
+```
+   mvn clean test
+```    
+
+System properties required for tests:
+**test.kafka_server** - Kafka broker instance address.
+**test.cluster_api_key** - Confluent API key.
+**test.cluster_api_secret** - Confluent API secret.
+**test.schema_registry_url** - Schema Registry URL.
+**test.schema_registry_api_key** - Schema Registry API key.
+**test.schema_registry_api_secret** - Schema Registry API secret.
+
 Deployment
 ----------
 You can deploy your plugins using the CDAP CLI:
