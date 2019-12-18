@@ -73,8 +73,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>6.1.0-SNAPSHOT</cdap.version>
-    <cdap.plugin.version>2.3.0-SNAPSHOT</cdap.plugin.version>
+    <cdap.version>6.1.1</cdap.version>
+    <cdap.plugin.version>2.3.4</cdap.plugin.version>
     <spark1.version>1.6.1</spark1.version>
     <spark2.version>2.2.0</spark2.version>
     <widgets.dir>widgets</widgets.dir>
