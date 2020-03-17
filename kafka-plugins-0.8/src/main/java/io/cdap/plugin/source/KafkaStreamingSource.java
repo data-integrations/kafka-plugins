@@ -26,10 +26,13 @@ import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.StageConfigurer;
 import io.cdap.cdap.etl.api.streaming.StreamingContext;
 import io.cdap.cdap.etl.api.streaming.StreamingSource;
+import io.cdap.cdap.etl.api.streaming.StreamingSourceContext;
+import io.cdap.plugin.common.LineageRecorder;
 import org.apache.spark.streaming.api.java.JavaDStream;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Kafka Streaming source
@@ -63,8 +66,20 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
   }
 
   @Override
+  public void prepareRun(StreamingSourceContext context) throws Exception {
+    Schema schema = conf.getSchema(context.getFailureCollector());
+    // record dataset lineage
+    context.registerLineage(conf.referenceName, schema);
+
+    if (schema != null && schema.getFields() != null) {
+      LineageRecorder recorder = new LineageRecorder(context, conf.referenceName);
+      recorder.recordRead("Read", "Read from Kafka",
+                          schema.getFields().stream().map(Schema.Field::getName).collect(Collectors.toList()));
+    }
+  }
+
+  @Override
   public JavaDStream<StructuredRecord> getStream(StreamingContext context) throws Exception {
-    context.registerLineage(conf.referenceName);
     FailureCollector collector = context.getFailureCollector();
 
     return KafkaStreamingSourceUtil.getStructuredRecordJavaDStream(context, conf, collector);
