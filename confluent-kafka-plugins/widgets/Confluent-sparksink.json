@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "spec-version": "1.5"
+  },
+  "display-name": "Confluent Kafka",
+  "configuration-groups": [
+    {
+      "label": "Kafka Configuration",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Reference Name",
+          "name": "referenceName"
+        },
+        {
+          "widget-type": "csv",
+          "label": "Kafka Brokers",
+          "name": "brokers",
+          "widget-attributes": {
+            "delimiter": ","
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Kafka Topic",
+          "name": "topic"
+        },
+        {
+          "widget-type": "toggle",
+          "label": "Async",
+          "name": "async",
+          "widget-attributes": {
+            "on": {
+              "value": "true",
+              "label": "Yes"
+            },
+            "off": {
+              "value": "false",
+              "label": "No"
+            },
+            "default": "false"
+          }
+        },
+        {
+          "widget-type": "select",
+          "label": "Compression Type",
+          "name": "compressionType",
+          "widget-attributes": {
+            "values": [
+              "none",
+              "gzip",
+              "snappy"
+            ],
+            "default": "none"
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Time Field",
+          "name": "timeField"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Key Field",
+          "name": "keyField"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Partition Field",
+          "name": "partitionField"
+        },
+        {
+          "widget-type": "keyvalue",
+          "label": "Additional Kafka Producer Properties",
+          "name": "kafkaProperties",
+          "widget-attributes": {
+            "showDelimiter": "false",
+            "key-placeholder": "Kafka producer property",
+            "value-placeholder": "Kafka producer property value"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Authentication",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Cluster API Key",
+          "name": "clusterApiKey"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Cluster API Secret",
+          "name": "clusterApiSecret"
+        }
+      ]
+    },
+    {
+      "label": "Schema Registry",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Schema Registry URL",
+          "name": "schemaRegistryUrl"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Schema Registry API Key",
+          "name": "schemaRegistryApiKey"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Schema Registry API Secret",
+          "name": "schemaRegistryApiSecret"
+        }
+      ]
+    },
+    {
+      "label": "Message Configuration",
+      "properties": [
+        {
+          "widget-type": "select",
+          "label": "Message Format",
+          "name": "format",
+          "widget-attributes": {
+            "values": [
+              "",
+              "CSV",
+              "JSON"
+            ],
+            "default": ""
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": [],
+  "jump-config": {
+    "datasets": [
+      {
+        "ref-property-name": "referenceName"
+      }
+    ]
+  }
+}
