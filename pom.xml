@@ -9,6 +9,8 @@
   <artifactId>kafka-plugins</artifactId>
   <packaging>pom</packaging>
   <version>2.2.2</version>
+  <description>Plugins for Apache Kafka</description>
+  <url>https://github.com/data-integrations/kafka-plugins</url>
 
   <licenses>
     <license>
@@ -32,6 +34,13 @@
       <organizationUrl>http://cdap.io</organizationUrl>
     </developer>
   </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/data-integrations/kafka-plugins.git</connection>
+    <developerConnection>scm:git:git@github.com:data-integrations/kafka-plugins.git</developerConnection>
+    <url>https://github.com/data-integrations/kafka-plugins.git</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <issueManagement>
     <url>https://issues.cask.co/browse/CDAP</url>
