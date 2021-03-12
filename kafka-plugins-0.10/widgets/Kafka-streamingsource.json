@@ -42,6 +42,18 @@
           }
         },
         {
+          "widget-type": "select",
+          "label": "Initial Offset",
+          "name": "initialOffset",
+          "widget-attributes": {
+            "values": [
+              "Start from beginning",
+              "Start from last processed offset",
+              "Start from specific offset"
+            ]
+          }
+        },
+        {
           "widget-type": "textbox",
           "label": "Default Initial Offset",
           "name": "defaultInitialOffset"
@@ -154,6 +166,20 @@
         "schema-default-type": "string",
         "property-watch": "format"
       }
+    }
+  ],
+  "filters": [
+    {
+      "name": "getOffsetInput",
+      "condition": {
+        "expression": "initialOffset == 'Start from specific offset'"
+      },
+      "show": [
+        {
+          "type": "property",
+          "name": "defaultInitialOffset"
+        }
+      ]
     }
   ],
   "jump-config": {
