@@ -71,6 +71,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import static io.cdap.plugin.source.KafkaConfig.OFFSET_START_FROM_LAST_OFFSET;
+
 /**
  * Tests for Spark plugins.
  */
@@ -208,6 +210,98 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
     messages.put("d", "4,terry,crews");
     messages.put("e", "5,sylvester,stallone");
     sendKafkaMessage("users", messages);
+
+    sparkManager.start();
+    sparkManager.waitForStatus(true, 10, 1);
+
+    Tasks.waitFor(
+      ImmutableMap.of(4L, "terry crews", 5L, "sylvester stallone"),
+      new Callable<Map<Long, String>>() {
+        @Override
+        public Map<Long, String> call() throws Exception {
+          outputManager.flush();
+          Map<Long, String> actual = new HashMap<>();
+          for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
+            actual.put((Long) outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
+          }
+          return actual;
+        }
+      },
+      2,
+      TimeUnit.MINUTES);
+
+    sparkManager.stop();
+  }
+
+  @Test
+  public void testKafkaStreamingSourceWithInitialOffset() throws Exception {
+    Schema schema = Schema.recordOf(
+      "user",
+      Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
+      Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
+
+    Map<String, String> properties = new HashMap<>();
+    properties.put("referenceName", "kafkaPurchasesOffsetTest");
+    properties.put("brokers", "localhost:" + kafkaPort);
+    properties.put("topic", "usersWithOffset");
+    properties.put("initialOffset", OFFSET_START_FROM_LAST_OFFSET);
+    properties.put("format", "csv");
+    properties.put("schema", schema.toString());
+
+    ETLStage source = new ETLStage("source", new ETLPlugin("Kafka", StreamingSource.PLUGIN_TYPE, properties, null));
+
+    DataStreamsConfig etlConfig = DataStreamsConfig.builder()
+      .addStage(source)
+      .addStage(new ETLStage("sink", MockSink.getPlugin("kafkaOutputOffsetTest")))
+      .addConnection("source", "sink")
+      .setBatchInterval("1s")
+      .setStopGracefully(true)
+      .build();
+
+    AppRequest<DataStreamsConfig> appRequest = new AppRequest<>(DATASTREAMS_ARTIFACT, etlConfig);
+    ApplicationId appId = NamespaceId.DEFAULT.app("KafkaSourceApp");
+    ApplicationManager appManager = deployApplication(appId, appRequest);
+
+    // write some messages to kafka
+    Map<String, String> messages = new HashMap<>();
+    messages.put("a", "1,samuel,jackson");
+    messages.put("b", "2,dwayne,johnson");
+    messages.put("c", "3,christopher,walken");
+    sendKafkaMessage("usersWithOffset", messages);
+
+    SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
+    sparkManager.start();
+    sparkManager.waitForStatus(true, 10, 1);
+
+    final DataSetManager<Table> outputManager = getDataset("kafkaOutputOffsetTest");
+    Tasks.waitFor(
+      ImmutableMap.of(1L, "samuel jackson", 2L, "dwayne johnson", 3L, "christopher walken"),
+      new Callable<Map<Long, String>>() {
+        @Override
+        public Map<Long, String> call() throws Exception {
+          outputManager.flush();
+          Map<Long, String> actual = new HashMap<>();
+          for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
+            actual.put((Long) outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
+          }
+          return actual;
+        }
+      },
+      2,
+      TimeUnit.MINUTES);
+
+    sparkManager.stop();
+    sparkManager.waitForStatus(false, 10, 1);
+
+    // clear the output table
+    MockSink.clear(outputManager);
+
+    // now write some more messages to kafka and start the program again to make sure it picks up where it left off
+    messages = new HashMap<>();
+    messages.put("d", "4,terry,crews");
+    messages.put("e", "5,sylvester,stallone");
+    sendKafkaMessage("usersWithOffset", messages);
 
     sparkManager.start();
     sparkManager.waitForStatus(true, 10, 1);
