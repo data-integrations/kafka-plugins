@@ -382,10 +382,10 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   public Map<TopicAndPartition, Long> getInitialPartitionOffsets(Set<Integer> partitionsToRead,
                                                                  FailureCollector collector) {
     Map<TopicAndPartition, Long> partitionOffsets = new HashMap<>();
-
     // set default initial partitions
+    final Long defaultInitialOffset = getDefaultInitialOffset();
     for (Integer partition : partitionsToRead) {
-      partitionOffsets.put(new TopicAndPartition(topic, partition), getDefaultInitialOffset());
+      partitionOffsets.put(new TopicAndPartition(topic, partition), defaultInitialOffset);
     }
 
     // if initial partition offsets are specified, overwrite the defaults.
