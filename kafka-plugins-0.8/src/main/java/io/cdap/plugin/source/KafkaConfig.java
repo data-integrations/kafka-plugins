@@ -84,14 +84,15 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   @Macro
   private String initialPartitionOffsets;
 
-  @Description("The default initial offset for all topic partitions. Defaults to -1.")
+  @Description("The default initial offset for all topic partitions. Defaults to latest offset..")
   @Nullable
   @Macro
   private Long defaultInitialOffset;
 
   @Description("The initial offset for all topic partitions. " +
-    "An offset of -2 means the smallest offset. An offset of -1 means the latest offset. Defaults to null. " +
-    "If other is selected default initial offset must be provided." +
+    "Start from beginning means the smallest offset will be set. " +
+    "Start from last processed offset means the latest offset will be set. Defaults to null. " +
+    "If start from specific offset is selected default initial offset must be provided." +
     "If you wish to set different initial offsets for different partitions, use the initialPartitionOffsets property.")
   @Nullable
   @Macro
@@ -209,10 +210,10 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
     if (!containsMacro(initialOffset) && !Strings.isNullOrEmpty(initialOffset)) {
       if (!initialOffset.equals(OFFSET_START_FROM_SPECIFIC_OFFSET)) {
         if (initialOffset.equals(OFFSET_START_FROM_BEGINNING)) {
-          return -1L;
+          return -2L;
         }
         if (initialOffset.equals(OFFSET_START_FROM_LAST_OFFSET)) {
-          return -2L;
+          return -1L;
         }
       }
     }

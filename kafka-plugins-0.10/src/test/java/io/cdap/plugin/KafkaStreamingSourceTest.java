@@ -37,6 +37,7 @@ import io.cdap.cdap.etl.mock.test.HydratorTestBase;
 import io.cdap.cdap.etl.proto.v2.DataStreamsConfig;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.etl.proto.v2.ETLStage;
+import io.cdap.cdap.proto.ProgramRunStatus;
 import io.cdap.cdap.proto.artifact.AppRequest;
 import io.cdap.cdap.proto.id.ApplicationId;
 import io.cdap.cdap.proto.id.ArtifactId;
@@ -69,7 +70,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static io.cdap.plugin.source.KafkaConfig.OFFSET_START_FROM_BEGINNING;
 import static io.cdap.plugin.source.KafkaConfig.OFFSET_START_FROM_LAST_OFFSET;
+import static io.cdap.plugin.source.KafkaConfig.OFFSET_START_FROM_SPECIFIC_OFFSET;
 
 /**
  * Tests for Spark plugins.
@@ -221,7 +224,7 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
   }
 
   @Test
-  public void testKafkaStreamingSourceInitialOffset() throws Exception {
+  public void testKafkaStreamingSourceFromLastOffset() throws Exception {
     Schema schema = Schema.recordOf(
       "user",
       Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
@@ -229,9 +232,9 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
       Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
 
     Map<String, String> properties = new HashMap<>();
-    properties.put("referenceName", "kafkaPurchasesOffsetTest");
+    properties.put("referenceName", "kafkaPurchasesLastOffsetTest");
     properties.put("brokers", "localhost:" + kafkaPort);
-    properties.put("topic", "usersWithOffset");
+    properties.put("topic", "usersWithLastOffsetTest");
     properties.put("initialOffset", OFFSET_START_FROM_LAST_OFFSET);
     properties.put("format", "csv");
     properties.put("schema", schema.toString());
@@ -240,7 +243,7 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
 
     DataStreamsConfig etlConfig = DataStreamsConfig.builder()
       .addStage(source)
-      .addStage(new ETLStage("sink", MockSink.getPlugin("kafkaOutputOffsetTest")))
+      .addStage(new ETLStage("sink", MockSink.getPlugin("kafkaOutputLastOffsetTest")))
       .addConnection("source", "sink")
       .setBatchInterval("1s")
       .setStopGracefully(true)
@@ -255,13 +258,73 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
     messages.put("a", "1,samuel,jackson");
     messages.put("b", "2,dwayne,johnson");
     messages.put("c", "3,christopher,walken");
-    sendKafkaMessage("usersWithOffset", messages);
 
     SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
     sparkManager.start();
     sparkManager.waitForStatus(true, 10, 1);
 
-    final DataSetManager<Table> outputManager = getDataset("kafkaOutputOffsetTest");
+    // for this test we have to wait for pipeline to be in running state before sending data
+    sparkManager.startAndWaitForRun(ProgramRunStatus.RUNNING, 20, TimeUnit.SECONDS);
+    final DataSetManager<Table> outputManager = getDataset("kafkaOutputLastOffsetTest");
+
+    sendKafkaMessage("usersWithLastOffsetTest", messages);
+    Tasks.waitFor(
+      ImmutableMap.of(1L, "samuel jackson", 2L, "dwayne johnson", 3L, "christopher walken"),
+      () -> {
+        outputManager.flush();
+        Map<Long, String> actual = new HashMap<>();
+        for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
+          actual.put(outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
+        }
+        return actual;
+      }, 2, TimeUnit.MINUTES);
+
+    sparkManager.stop();
+    sparkManager.waitForStatus(false, 10, 1);
+  }
+
+  @Test
+  public void testKafkaStreamingSourceFromBeginningOffset() throws Exception {
+    Schema schema = Schema.recordOf(
+      "user",
+      Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
+      Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
+
+    Map<String, String> properties = new HashMap<>();
+    properties.put("referenceName", "kafkaPurchasesBeginningOffsetTest");
+    properties.put("brokers", "localhost:" + kafkaPort);
+    properties.put("topic", "usersWithBeginningOffset");
+    properties.put("initialOffset", OFFSET_START_FROM_BEGINNING);
+    properties.put("format", "csv");
+    properties.put("schema", schema.toString());
+
+    ETLStage source = new ETLStage("source", new ETLPlugin("Kafka", StreamingSource.PLUGIN_TYPE, properties, null));
+
+    DataStreamsConfig etlConfig = DataStreamsConfig.builder()
+      .addStage(source)
+      .addStage(new ETLStage("sink", MockSink.getPlugin("kafkaOutputBeginningOffsetTest")))
+      .addConnection("source", "sink")
+      .setBatchInterval("1s")
+      .setStopGracefully(true)
+      .build();
+
+    AppRequest<DataStreamsConfig> appRequest = new AppRequest<>(DATASTREAMS_ARTIFACT, etlConfig);
+    ApplicationId appId = NamespaceId.DEFAULT.app("KafkaSourceApp");
+    ApplicationManager appManager = deployApplication(appId, appRequest);
+
+    // write some messages to kafka
+    Map<String, String> messages = new HashMap<>();
+    messages.put("a", "1,samuel,jackson");
+    messages.put("b", "2,dwayne,johnson");
+    messages.put("c", "3,christopher,walken");
+    sendKafkaMessage("usersWithBeginningOffset", messages);
+
+    SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
+    sparkManager.start();
+    sparkManager.waitForStatus(true, 10, 1);
+
+    final DataSetManager<Table> outputManager = getDataset("kafkaOutputBeginningOffsetTest");
     Tasks.waitFor(
       ImmutableMap.of(1L, "samuel jackson", 2L, "dwayne johnson", 3L, "christopher walken"),
       () -> {
@@ -283,7 +346,7 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
     messages = new HashMap<>();
     messages.put("d", "4,terry,crews");
     messages.put("e", "5,sylvester,stallone");
-    sendKafkaMessage("usersWithOffset", messages);
+    sendKafkaMessage("usersWithBeginningOffset", messages);
 
     sparkManager.start();
     sparkManager.waitForStatus(true, 10, 1);
@@ -300,6 +363,64 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
       }, 2, TimeUnit.MINUTES);
 
     sparkManager.stop();
+  }
+
+  @Test
+  public void testKafkaStreamingSourceSpecificOffset() throws Exception {
+    Schema schema = Schema.recordOf(
+      "user",
+      Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
+      Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("last", Schema.of(Schema.Type.STRING)));
+
+    Map<String, String> properties = new HashMap<>();
+    properties.put("referenceName", "kafkaPurchasesSpecificOffsetTest");
+    properties.put("brokers", "localhost:" + kafkaPort);
+    properties.put("topic", "usersWithSpecificOffset");
+    properties.put("initialOffset", OFFSET_START_FROM_SPECIFIC_OFFSET);
+    properties.put("defaultInitialOffset", "2");
+    properties.put("format", "csv");
+    properties.put("schema", schema.toString());
+
+    ETLStage source = new ETLStage("source", new ETLPlugin("Kafka", StreamingSource.PLUGIN_TYPE, properties, null));
+
+    DataStreamsConfig etlConfig = DataStreamsConfig.builder()
+      .addStage(source)
+      .addStage(new ETLStage("sink", MockSink.getPlugin("kafkaOutputSpecificOffsetTest")))
+      .addConnection("source", "sink")
+      .setBatchInterval("1s")
+      .setStopGracefully(true)
+      .build();
+
+    AppRequest<DataStreamsConfig> appRequest = new AppRequest<>(DATASTREAMS_ARTIFACT, etlConfig);
+    ApplicationId appId = NamespaceId.DEFAULT.app("KafkaSourceApp");
+    ApplicationManager appManager = deployApplication(appId, appRequest);
+
+    // write some messages to kafka
+    Map<String, String> messages = new HashMap<>();
+    messages.put("a", "1,samuel,jackson");
+    messages.put("b", "2,dwayne,johnson");
+    messages.put("c", "3,christopher,walken");
+    sendKafkaMessage("usersWithSpecificOffset", messages);
+
+    SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
+    sparkManager.start();
+    sparkManager.waitForStatus(true, 10, 1);
+
+    final DataSetManager<Table> outputManager = getDataset("kafkaOutputSpecificOffsetTest");
+    Tasks.waitFor(
+      ImmutableMap.of(3L, "christopher walken"),
+      () -> {
+        outputManager.flush();
+        Map<Long, String> actual = new HashMap<>();
+        for (StructuredRecord outputRecord : MockSink.readOutput(outputManager)) {
+          actual.put(outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
+        }
+        return actual;
+      }, 2, TimeUnit.MINUTES);
+
+    sparkManager.stop();
+    sparkManager.waitForStatus(false, 10, 1);
   }
 
   private static Properties generateKafkaConfig(String zkConnectStr, int port, File logDir) {
