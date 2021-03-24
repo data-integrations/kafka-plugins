@@ -29,6 +29,12 @@ An offset of -2 means the smallest offset. An offset of -1 means the latest offs
 Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read.
 If you wish to set different initial offsets for different partitions, use the initialPartitionOffsets property. (Macro-enabled)
 
+**initialOffset:** The initial offset for all topic partitions. 
+Start from beginning means the smallest offset will be set.
+Start from last processed offset means the latest offset will be set. Defaults to null. 
+If start from specific offset is selected default initial offset must be provided. 
+If you wish to set different initial offsets for different partitions, use the initialPartitionOffsets property.
+
 **initialPartitionOffsets:** The initial offset for each topic partition. If this is not specified,
 all partitions will use the same initial offset, which is determined by the defaultInitialOffset property.
 Any partitions specified in the partitions property, but not in this property will use the defaultInitialOffset.
