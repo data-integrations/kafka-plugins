@@ -46,6 +46,7 @@
           "label": "Initial Offset",
           "name": "initialOffset",
           "widget-attributes": {
+            "default": "Start from beginning",
             "values": [
               "Start from beginning",
               "Start from last processed offset",
