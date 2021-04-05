@@ -56,6 +56,9 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   private static final String NAME_OFFSET_FIELD = "offsetField";
   private static final String NAME_FORMAT = "format";
   private static final String SEPARATOR = ":";
+  public static final String OFFSET_START_FROM_BEGINNING = "Start from beginning";
+  public static final String OFFSET_START_FROM_LAST_OFFSET = "Start from last processed offset";
+  public static final String OFFSET_START_FROM_SPECIFIC_OFFSET = "Start from specific offset";
 
   private static final long serialVersionUID = 8069169417140954175L;
 
@@ -81,13 +84,19 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   @Macro
   private String initialPartitionOffsets;
 
-  @Description("The default initial offset for all topic partitions. " +
-    "An offset of -2 means the smallest offset. An offset of -1 means the latest offset. Defaults to -1. " +
-    "Offsets are inclusive. If an offset of 5 is used, the message at offset 5 will be read. " +
-    "If you wish to set different initial offsets for different partitions, use the initialPartitionOffsets property.")
+  @Description("The default initial offset for all topic partitions. Defaults to latest offset..")
   @Nullable
   @Macro
   private Long defaultInitialOffset;
+
+  @Description("The initial offset for all topic partitions. " +
+    "Start from beginning means the smallest offset will be set. " +
+    "Start from last processed offset means the latest offset will be set. Defaults to null. " +
+    "If start from specific offset is selected default initial offset must be provided." +
+    "If you wish to set different initial offsets for different partitions, use the initialPartitionOffsets property.")
+  @Nullable
+  @Macro
+  private String initialOffset;
 
   @Description("Output schema of the source, including the timeField and keyField. " +
     "The fields excluding the timeField and keyField are used in conjunction with the format " +
@@ -194,6 +203,21 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
   @Nullable
   public Integer getMaxRatePerPartition() {
     return maxRatePerPartition;
+  }
+
+  @Nullable
+  public Long getDefaultInitialOffset() {
+    if (!containsMacro(initialOffset) && !Strings.isNullOrEmpty(initialOffset)) {
+      if (!initialOffset.equals(OFFSET_START_FROM_SPECIFIC_OFFSET)) {
+        if (initialOffset.equals(OFFSET_START_FROM_BEGINNING)) {
+          return -2L;
+        }
+        if (initialOffset.equals(OFFSET_START_FROM_LAST_OFFSET)) {
+          return -1L;
+        }
+      }
+    }
+    return defaultInitialOffset;
   }
 
   @Nullable
@@ -353,14 +377,14 @@ public class KafkaConfig extends ReferencePluginConfig implements Serializable {
    * initialPartitionOffsets property, that value will be used. Otherwise, the defaultInitialOffset will be used.
    *
    * @param partitionsToRead the partitions to read
-   * @param collector failure collector
+   * @param collector        failure collector
    * @return initial partition offsets.
    */
   public Map<TopicAndPartition, Long> getInitialPartitionOffsets(Set<Integer> partitionsToRead,
                                                                  FailureCollector collector) {
     Map<TopicAndPartition, Long> partitionOffsets = new HashMap<>();
-
     // set default initial partitions
+    final Long defaultInitialOffset = getDefaultInitialOffset();
     for (Integer partition : partitionsToRead) {
       partitionOffsets.put(new TopicAndPartition(topic, partition), defaultInitialOffset);
     }
