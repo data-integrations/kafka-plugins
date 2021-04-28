@@ -264,7 +264,7 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
     sparkManager.waitForStatus(true, 10, 1);
 
     // for this test we have to wait for pipeline to be in running state before sending data
-    sparkManager.startAndWaitForRun(ProgramRunStatus.RUNNING, 20, TimeUnit.SECONDS);
+    sparkManager.waitForRun(ProgramRunStatus.RUNNING, 20, TimeUnit.SECONDS);
     final DataSetManager<Table> outputManager = getDataset("kafkaOutputLastOffsetTest");
 
     sendKafkaMessage("usersWithLastOffsetTest", messages);
