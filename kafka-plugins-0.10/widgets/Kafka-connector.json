@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "spec-version": "1.5"
+  },
+  "display-name": "Kafka Connector",
+  "configuration-groups": [
+    {
+      "label": "Credentials",
+      "properties": [
+        {
+          "widget-type": "csv",
+          "label": "Kafka Brokers",
+          "name": "kafkaBrokers",
+          "widget-attributes": {
+            "delimiter": ","
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": []
+}

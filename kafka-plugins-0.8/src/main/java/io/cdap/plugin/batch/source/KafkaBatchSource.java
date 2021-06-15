@@ -17,6 +17,7 @@
 package io.cdap.plugin.batch.source;
 
 import io.cdap.cdap.api.annotation.Description;
+import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.data.batch.Input;
@@ -63,7 +64,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
   public static final String NAME = "Kafka";
 
-  private final KafkaBatchConfig config;
+  private final Kafka08BatchConfig config;
   private FileContext fileContext;
   private Path offsetsFile;
   private List<KafkaRequest> kafkaRequests;
@@ -71,7 +72,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
   private RecordFormat<ByteBuffer, StructuredRecord> recordFormat;
   private String messageField;
 
-  public KafkaBatchSource(KafkaBatchConfig config) {
+  public KafkaBatchSource(Kafka08BatchConfig config) {
     this.config = config;
   }
 
@@ -90,7 +91,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     FailureCollector failureCollector = context.getFailureCollector();
     KafkaPartitionOffsets partitionOffsets = config.getInitialPartitionOffsets(failureCollector);
-    Map<String, Integer> brokerMap = config.getBrokerMap(failureCollector);
+    Map<String, Integer> brokerMap = KafkaBatchConfig.parseBrokerMap(config.kafkaBrokers, failureCollector);
     Set<Integer> partitions = config.getPartitions(failureCollector);
     Schema schema = config.getSchema(failureCollector);
     failureCollector.getOrThrowException();
@@ -185,5 +186,32 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       }
     }
     emitter.emit(builder.build());
+  }
+
+  /**
+   * kafka 0.8 config
+   */
+  public static class Kafka08BatchConfig extends KafkaBatchConfig {
+    @Description("List of Kafka brokers specified in host1:port1,host2:port2 form. For example, " +
+                   "host1.example.com:9092,host2.example.com:9092.")
+    @Macro
+    private String kafkaBrokers;
+
+    public Kafka08BatchConfig() {
+      super();
+    }
+
+    public Kafka08BatchConfig(String partitions, String topic, String initialPartitionOffsets) {
+      super(partitions, topic, initialPartitionOffsets);
+    }
+
+    @Override
+    public void validate(FailureCollector collector) {
+      super.validate(collector);
+      // brokers can be null since it is macro enabled.
+      if (kafkaBrokers != null) {
+        parseBrokerMap(kafkaBrokers, collector);
+      }
+    }
   }
 }

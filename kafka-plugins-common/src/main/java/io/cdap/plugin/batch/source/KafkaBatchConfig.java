@@ -36,16 +36,12 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   public static final String SCHEMA = "schema";
   public static final String INITIAL_PARTITION_OFFSETS = "initialPartitionOffsets";
   public static final String FORMAT = "format";
+  public static final String TOPIC = "topic";
   public static final String KAFKA_BROKERS = "kafkaBrokers";
 
   @Description("Kafka topic to read from.")
   @Macro
   private String topic;
-
-  @Description("List of Kafka brokers specified in host1:port1,host2:port2 form. For example, " +
-    "host1.example.com:9092,host2.example.com:9092.")
-  @Macro
-  private String kafkaBrokers;
 
   @Description("A directory path to store the latest Kafka offsets. " +
     "A file named with the pipeline name will be created under the given directory.")
@@ -108,9 +104,8 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
     super("");
   }
 
-  public KafkaBatchConfig(String brokers, String partitions, String topic, String initialPartitionOffsets) {
+  public KafkaBatchConfig(String partitions, String topic, String initialPartitionOffsets) {
     super(String.format("Kafka_%s", topic));
-    this.kafkaBrokers = brokers;
     this.partitions = partitions;
     this.topic = topic;
     this.initialPartitionOffsets = initialPartitionOffsets;
@@ -119,10 +114,6 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   // Accessors
   public String getTopic() {
     return topic;
-  }
-
-  public String getBrokers() {
-    return kafkaBrokers;
   }
 
   @Nullable
@@ -249,13 +240,6 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   }
 
   /**
-   * @return broker host to broker port mapping.
-   */
-  public Map<String, Integer> getBrokerMap(FailureCollector collector) {
-    return parseBrokerMap(kafkaBrokers, collector);
-  }
-
-  /**
    * Parses a given Kafka broker string, which is in comma separate host:port format, into a Map of host to port.
    */
   public static Map<String, Integer> parseBrokerMap(String kafkaBrokers, @Nullable FailureCollector collector) {
@@ -324,10 +308,6 @@ public class KafkaBatchConfig extends ReferencePluginConfig {
   }
 
   public void validate(FailureCollector collector) {
-    // brokers can be null since it is macro enabled.
-    if (kafkaBrokers != null) {
-      getBrokerMap(collector);
-    }
     getPartitions(collector);
     getInitialPartitionOffsets(collector);
 

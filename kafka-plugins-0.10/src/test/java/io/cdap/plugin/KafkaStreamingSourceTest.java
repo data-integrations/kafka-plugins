@@ -267,6 +267,7 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
     sparkManager.waitForRun(ProgramRunStatus.RUNNING, 20, TimeUnit.SECONDS);
     final DataSetManager<Table> outputManager = getDataset("kafkaOutputLastOffsetTest");
 
+    TimeUnit.SECONDS.sleep(1);
     sendKafkaMessage("usersWithLastOffsetTest", messages);
     Tasks.waitFor(
       ImmutableMap.of(1L, "samuel jackson", 2L, "dwayne johnson", 3L, "christopher walken"),
