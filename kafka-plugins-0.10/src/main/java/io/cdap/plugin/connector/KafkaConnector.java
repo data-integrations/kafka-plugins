@@ -58,7 +58,7 @@ import java.util.UUID;
 @Plugin(type = Connector.PLUGIN_TYPE)
 @Name(KafkaConnector.NAME)
 @Category("Messaging Systems")
-@Description("Kafka Connector to browse and sample topics using kafka 0.10.2 api")
+@Description("Connection to browse and sample data from Kafka topics.")
 public class KafkaConnector implements DirectConnector {
   public static final String NAME = "Kafka";
   static final String TOPIC_TYPE = "topic";
