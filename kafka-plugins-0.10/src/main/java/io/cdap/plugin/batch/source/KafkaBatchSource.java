@@ -36,6 +36,7 @@ import io.cdap.cdap.etl.api.batch.BatchRuntimeContext;
 import io.cdap.cdap.etl.api.batch.BatchSource;
 import io.cdap.cdap.etl.api.batch.BatchSourceContext;
 import io.cdap.cdap.format.RecordFormats;
+import io.cdap.plugin.common.ConfigUtil;
 import io.cdap.plugin.common.KafkaHelpers;
 import io.cdap.plugin.common.KeyValueListParser;
 import io.cdap.plugin.common.LineageRecorder;
@@ -81,8 +82,6 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
    * Config properties for the plugin.
    */
   public static class Kafka10BatchConfig extends KafkaBatchConfig {
-    public static final String NAME_USE_CONNECTION = "useConnection";
-    public static final String NAME_CONNECTION = "connection";
 
     @Description("Additional kafka consumer properties to set.")
     @Macro
@@ -99,12 +98,12 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
     @Nullable
     private String keytabLocation;
 
-    @Name(NAME_USE_CONNECTION)
+    @Name(ConfigUtil.NAME_USE_CONNECTION)
     @Nullable
     @Description("Whether to use an existing connection.")
     private Boolean useConnection;
 
-    @Name(NAME_CONNECTION)
+    @Name(ConfigUtil.NAME_CONNECTION)
     @Macro
     @Nullable
     @Description("The connection to use.")
@@ -145,15 +144,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     public void validate(FailureCollector collector) {
       super.validate(collector);
-      // if use connection is false but connection is provided as macro, fail the validation
-      if (useConnection != null && !useConnection && containsMacro(NAME_CONNECTION)) {
-        collector.addFailure(
-          String.format("Connection cannot be used when %s is set to false.", NAME_USE_CONNECTION),
-          String.format("Please set %s to true.", NAME_USE_CONNECTION)).withConfigProperty(NAME_USE_CONNECTION);
-      }
-      if (!containsMacro(NAME_CONNECTION) && connection == null) {
-        collector.addFailure("Connection cannot be null", null).withConfigProperty(NAME_CONNECTION);
-      }
+      ConfigUtil.validateConnection(this, useConnection, connection, collector);
       KafkaHelpers.validateKerberosSetting(principal, keytabLocation, collector);
       if (connection != null && connection.getKafkaBrokers() != null) {
         parseBrokerMap(connection.getKafkaBrokers(), collector);

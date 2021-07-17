@@ -37,6 +37,7 @@ import io.cdap.cdap.etl.api.connector.SampleRequest;
 import io.cdap.cdap.etl.api.validation.ValidationException;
 import io.cdap.plugin.batch.source.KafkaBatchConfig;
 import io.cdap.plugin.batch.source.KafkaBatchSource;
+import io.cdap.plugin.common.ConfigUtil;
 import io.cdap.plugin.common.Constants;
 import io.cdap.plugin.common.ReferenceNames;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -60,7 +61,7 @@ import java.util.UUID;
 @Plugin(type = Connector.PLUGIN_TYPE)
 @Name(KafkaConnector.NAME)
 @Category("Messaging Systems")
-@Description("Kafka Connector to browse and sample topics using kafka 0.10.2 api")
+@Description("Connection to browse and sample data from Kafka topics.")
 public class KafkaConnector implements DirectConnector {
   public static final String NAME = "Kafka";
   static final String TOPIC_TYPE = "topic";
@@ -131,8 +132,8 @@ public class KafkaConnector implements DirectConnector {
   @Override
   public ConnectorSpec generateSpec(ConnectorContext connectorContext, ConnectorSpecRequest request) {
     Map<String, String> properties = new HashMap<>();
-    properties.put(KafkaBatchSource.Kafka10BatchConfig.NAME_USE_CONNECTION, "true");
-    properties.put(KafkaBatchSource.Kafka10BatchConfig.NAME_CONNECTION, request.getConnectionWithMacro());
+    properties.put(ConfigUtil.NAME_USE_CONNECTION, "true");
+    properties.put(ConfigUtil.NAME_CONNECTION, request.getConnectionWithMacro());
     properties.put(KafkaBatchConfig.FORMAT, "text");
     String topic = cleanse(request.getPath());
     if (!topic.isEmpty()) {
