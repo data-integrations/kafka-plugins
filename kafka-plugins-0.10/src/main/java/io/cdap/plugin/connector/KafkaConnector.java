@@ -37,6 +37,8 @@ import io.cdap.cdap.etl.api.connector.SampleRequest;
 import io.cdap.cdap.etl.api.validation.ValidationException;
 import io.cdap.plugin.batch.source.KafkaBatchConfig;
 import io.cdap.plugin.batch.source.KafkaBatchSource;
+import io.cdap.plugin.common.Constants;
+import io.cdap.plugin.common.ReferenceNames;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -135,6 +137,7 @@ public class KafkaConnector implements DirectConnector {
     String topic = cleanse(request.getPath());
     if (!topic.isEmpty()) {
       properties.put(KafkaBatchConfig.TOPIC, topic);
+      properties.put(Constants.Reference.REFERENCE_NAME, ReferenceNames.cleanseReferenceName(topic));
     }
     return ConnectorSpec.builder().setSchema(DEFAULT_SCHEMA)
       .addRelatedPlugin(new PluginSpec(KafkaBatchSource.NAME, BatchSource.PLUGIN_TYPE, properties)).build();
