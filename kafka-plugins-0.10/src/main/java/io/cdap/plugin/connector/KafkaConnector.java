@@ -132,8 +132,7 @@ public class KafkaConnector implements DirectConnector {
   @Override
   public ConnectorSpec generateSpec(ConnectorContext connectorContext, ConnectorSpecRequest request) {
     Map<String, String> properties = new HashMap<>();
-    properties.put(ConfigUtil.NAME_USE_CONNECTION, "true");
-    properties.put(ConfigUtil.NAME_CONNECTION, request.getConnectionWithMacro());
+    properties.put(KafkaConnectorConfig.BROKERS, config.getKafkaBrokers());
     properties.put(KafkaBatchConfig.FORMAT, "text");
     String topic = cleanse(request.getPath());
     if (!topic.isEmpty()) {
