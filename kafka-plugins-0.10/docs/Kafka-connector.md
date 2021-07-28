@@ -1,4 +1,4 @@
-# Kafka Batch Source
+# Kafka Connection
 
 Description
 -----------
