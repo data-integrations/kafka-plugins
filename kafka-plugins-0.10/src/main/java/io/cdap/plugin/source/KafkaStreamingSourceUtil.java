@@ -32,6 +32,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -141,6 +142,10 @@ final class KafkaStreamingSourceUtil {
         context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
         ConsumerStrategies.<byte[], byte[]>Subscribe(Collections.singleton(conf.getTopic()), kafkaParams, offsets)
       ).transform(new RecordTransform(conf));
+    } catch (KafkaException e) {
+      LOG.error("Exception occurred while trying to read from kafka topic: {}", e.getMessage());
+      LOG.error("Please verify that the hostname/IPAddress of the kafka server is correct and that it is running.");
+      throw e;
     }
   }
 
