@@ -125,6 +125,11 @@ final class KafkaStreamingSourceUtil {
         MessageAndMetadata.class, kafkaParams, offsets,
         (Function<MessageAndMetadata<byte[], byte[]>, MessageAndMetadata>) in -> in)
         .transform(new RecordTransform(conf));
+    } catch (Exception e) {
+      // getPartitions() throws a ClosedChannelException if kafka connection fails
+      LOG.error("Unable to read from kafka. " +
+                  "Please verify that the hostname/IPAddress of the kafka server is correct and that it is running.");
+      throw e;
     } finally {
       for (SimpleConsumer consumer : consumers) {
         try {
