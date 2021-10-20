@@ -118,12 +118,14 @@ public class KafkaConnector implements DirectConnector {
         if (!topics.contains(path)) {
           return builder.build();
         }
-        return builder.setTotalCount(1).addEntity(BrowseEntity.builder(path, path, TOPIC_TYPE).build()).build();
+        return builder.setTotalCount(1).addEntity(BrowseEntity.builder(path, path, TOPIC_TYPE)
+                                                    .canSample(true).build()).build();
       }
 
       // set limit
       topics.stream().limit(limit)
-        .forEach(topic -> builder.addEntity(BrowseEntity.builder(topic, topic, TOPIC_TYPE).build()));
+        .forEach(topic -> builder.addEntity(BrowseEntity.builder(topic, topic, TOPIC_TYPE)
+                                              .canSample(true).build()));
       builder.setTotalCount(topics.size());
       return builder.build();
     }
