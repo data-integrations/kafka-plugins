@@ -23,6 +23,7 @@
   <modules>
     <module>kafka-plugins-0.8</module>
     <module>kafka-plugins-0.10</module>
+    <module>confluent-kafka-plugins</module>
     <module>kafka-plugins-common</module>
   </modules>
 
