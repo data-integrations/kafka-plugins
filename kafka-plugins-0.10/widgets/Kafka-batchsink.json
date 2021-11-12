@@ -5,6 +5,42 @@
   "display-name": "Kafka Producer",
   "configuration-groups": [
     {
+      "label": "Connection",
+      "properties": [
+        {
+          "widget-type": "hidden",
+          "name": "useConnection",
+          "widget-attributes" : {
+            "default": "false"
+          }
+        },
+        {
+          "widget-type": "connection-select",
+          "label": "Connection",
+          "name": "connection",
+          "widget-attributes": {
+            "connectionType": "Kafka"
+          }
+        },
+        {
+          "widget-type": "hidden",
+          "label": "Kafka Brokers",
+          "name": "kafkaBrokers",
+          "widget-attributes": {
+            "delimiter": ","
+          }
+        },
+        {
+          "widget-type": "csv",
+          "label": "Kafka Brokers",
+          "name": "brokers",
+          "widget-attributes": {
+            "delimiter": ","
+          }
+        }
+      ]
+    },
+    {
       "label": "Kafka Producer and Topic Config",
       "properties": [
         {
@@ -13,11 +49,11 @@
           "name": "referenceName"
         },
         {
-          "widget-type": "csv",
-          "label": "Kafka Brokers",
-          "name": "brokers",
+          "widget-type": "connection-browser",
+          "widget-category": "plugin",
           "widget-attributes": {
-            "delimiter": ","
+            "connectionType": "KAFKA",
+            "label": "Browse"
           }
         },
         {
@@ -107,5 +143,31 @@
         "ref-property-name": "referenceName"
       }
     ]
-  }
+  },
+  "filters": [
+    {
+      "name": "showConnectionProperties ",
+      "condition": {
+        "expression": "useConnection == false"
+      },
+      "show": [
+        {
+          "type": "property",
+          "name": "brokers"
+        }
+      ]
+    },
+    {
+      "name": "showConnectionId",
+      "condition": {
+        "expression": "useConnection == true"
+      },
+      "show": [
+        {
+          "type": "property",
+          "name": "connection"
+        }
+      ]
+    }
+  ]
 }

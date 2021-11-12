@@ -33,6 +33,8 @@ import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.cdap.etl.api.batch.BatchSinkContext;
 import io.cdap.cdap.format.StructuredRecordStringConverter;
+import io.cdap.plugin.batch.source.KafkaBatchConfig;
+import io.cdap.plugin.common.ConfigUtil;
 import io.cdap.plugin.common.KafkaHelpers;
 import io.cdap.plugin.common.KeyValueListParser;
 import io.cdap.plugin.common.LineageRecorder;
@@ -55,10 +57,11 @@ import javax.annotation.Nullable;
  * Kafka sink to write to Kafka
  */
 @Plugin(type = BatchSink.PLUGIN_TYPE)
-@Name("Kafka")
+@Name(KafkaBatchSink.NAME)
 @Description("KafkaSink to write events to kafka")
 public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, Text> {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaBatchSink.class);
+  public static final String NAME = "Kafka";
   private static final String ASYNC = "async";
   private static final String TOPIC = "topic";
 
@@ -138,19 +141,23 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
    * Kafka Producer Configuration.
    */
   public static class Config extends ReferencePluginConfig {
-
-    private static final String BROKERS = "brokers";
+    
     private static final String KEY = "key";
     private static final String TOPIC = KafkaBatchSink.TOPIC;
     private static final String FORMAT = "format";
     private static final String KAFKA_PROPERTIES = "kafkaProperties";
     private static final String COMPRESSION_TYPE = "compressionType";
 
-    @Name(BROKERS)
-    @Description("Specifies the connection string where Producer can find one or more brokers to " +
-      "determine the leader for each topic")
+    @Name(ConfigUtil.NAME_USE_CONNECTION)
+    @Nullable
+    @Description("Whether to use an existing connection.")
+    private Boolean useConnection;
+
+    @Name(ConfigUtil.NAME_CONNECTION)
     @Macro
-    private String brokers;
+    @Nullable
+    @Description("The connection to use.")
+    private KafkaSinkConnectorConfig connection;
 
     @Name(ASYNC)
     @Description("Specifies whether an acknowledgment is required from broker that message was received. " +
@@ -195,10 +202,18 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
     @Macro
     private String compressionType;
 
+    public boolean useConnection() {
+      return useConnection != null && useConnection;
+    }
+    
+    public String getBrokers() {
+      return connection == null ? null : connection.getBrokers();
+    }
+
     public Config(String brokers, String async, String key, String topic, String format, String kafkaProperties,
                   String compressionType) {
       super(String.format("Kafka_%s", topic));
-      this.brokers = brokers;
+      this.connection = new KafkaSinkConnectorConfig(brokers);
       this.async = async;
       this.key = key;
       this.topic = topic;
@@ -208,12 +223,22 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
     }
 
     private void validate(FailureCollector collector) {
+      if (useConnection()) {
+        collector.addFailure("Kafka batch sink plugin doesn't support using existing connection.",
+                             "Don't set useConnection property to true.");
+      }
+      if (containsMacro(ConfigUtil.NAME_CONNECTION)) {
+        collector.addFailure("Kafka batch sink plugin doesn't support using existing connection.",
+                             "Remove macro in connection property.");
+      }
       if (!async.equalsIgnoreCase("true") && !async.equalsIgnoreCase("false")) {
         collector.addFailure("Async flag has to be either TRUE or FALSE.", null)
                 .withConfigProperty(ASYNC);
       }
-
       KafkaHelpers.validateKerberosSetting(principal, keytabLocation, collector);
+      if (connection != null && connection.getBrokers() != null) {
+        KafkaBatchConfig.parseBrokerMap(connection.getBrokers(), collector);
+      }
     }
   }
 
@@ -225,7 +250,7 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
       this.conf = new HashMap<>();
       conf.put(TOPIC, kafkaSinkConfig.topic);
 
-      conf.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaSinkConfig.brokers);
+      conf.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaSinkConfig.getBrokers());
       conf.put("compression.type", kafkaSinkConfig.compressionType);
       conf.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
       conf.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
