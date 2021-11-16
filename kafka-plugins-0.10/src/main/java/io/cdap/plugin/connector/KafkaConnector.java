@@ -23,6 +23,7 @@ import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.cdap.etl.api.batch.BatchSource;
 import io.cdap.cdap.etl.api.connector.BrowseDetail;
 import io.cdap.cdap.etl.api.connector.BrowseEntity;
@@ -40,6 +41,8 @@ import io.cdap.plugin.batch.source.KafkaBatchSource;
 import io.cdap.plugin.common.ConfigUtil;
 import io.cdap.plugin.common.Constants;
 import io.cdap.plugin.common.ReferenceNames;
+import io.cdap.plugin.sink.KafkaBatchSink;
+import io.cdap.plugin.sink.KafkaSinkConnectorConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -135,6 +138,7 @@ public class KafkaConnector implements DirectConnector {
   public ConnectorSpec generateSpec(ConnectorContext connectorContext, ConnectorSpecRequest request) {
     Map<String, String> properties = new HashMap<>();
     properties.put(KafkaConnectorConfig.BROKERS, config.getKafkaBrokers());
+    properties.put(KafkaSinkConnectorConfig.BROKERS, config.getKafkaBrokers());
     properties.put(KafkaBatchConfig.FORMAT, "text");
     String topic = cleanse(request.getPath());
     if (!topic.isEmpty()) {
@@ -142,7 +146,9 @@ public class KafkaConnector implements DirectConnector {
       properties.put(Constants.Reference.REFERENCE_NAME, ReferenceNames.cleanseReferenceName(topic));
     }
     return ConnectorSpec.builder().setSchema(DEFAULT_SCHEMA)
-      .addRelatedPlugin(new PluginSpec(KafkaBatchSource.NAME, BatchSource.PLUGIN_TYPE, properties)).build();
+      .addRelatedPlugin(new PluginSpec(KafkaBatchSource.NAME, BatchSource.PLUGIN_TYPE, properties))
+      .addRelatedPlugin(new PluginSpec(KafkaBatchSink.NAME, BatchSink.PLUGIN_TYPE, properties))
+      .build();
   }
 
   private KafkaConsumer<String, String> getKafkaConsumer() {

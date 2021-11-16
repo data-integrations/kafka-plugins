@@ -12,6 +12,11 @@ compression types to events. This plugin uses kafka 0.10.2 java apis.
 
 Configuration
 -------------
+**Use Connection** Whether to use a connection, if a connection is used,
+the brokers do not need to be provided.
+
+**Connection** Name of the connection to use, should have the macro function ${conn(connection-name)} to provide.
+
 **referenceName:** This will be used to uniquely identify this sink for lineage, annotating metadata, etc.
 
 **brokers:** List of Kafka brokers specified in host1:port1,host2:port2 form.
