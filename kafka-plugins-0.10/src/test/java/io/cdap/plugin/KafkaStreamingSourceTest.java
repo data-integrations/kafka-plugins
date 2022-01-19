@@ -278,7 +278,7 @@ public class KafkaStreamingSourceTest extends HydratorTestBase {
           actual.put(outputRecord.get("id"), outputRecord.get("first") + " " + outputRecord.get("last"));
         }
         return actual;
-      }, 2, TimeUnit.MINUTES);
+      }, 3, TimeUnit.MINUTES);
 
     sparkManager.stop();
     sparkManager.waitForStatus(false, 10, 1);
