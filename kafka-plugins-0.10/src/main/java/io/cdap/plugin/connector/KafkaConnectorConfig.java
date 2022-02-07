@@ -25,8 +25,6 @@ import io.cdap.cdap.api.plugin.PluginConfig;
  * Kafka connector config
  */
 public class KafkaConnectorConfig extends PluginConfig {
-  public static final String BROKERS = "kafkaBrokers";
-
   @Description("List of Kafka brokers specified in host1:port1,host2:port2 form. For example, " +
                  "host1.example.com:9092,host2.example.com:9092.")
   @Macro

@@ -42,7 +42,6 @@ import io.cdap.plugin.common.ConfigUtil;
 import io.cdap.plugin.common.Constants;
 import io.cdap.plugin.common.ReferenceNames;
 import io.cdap.plugin.sink.KafkaBatchSink;
-import io.cdap.plugin.sink.KafkaSinkConnectorConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -137,8 +136,8 @@ public class KafkaConnector implements DirectConnector {
   @Override
   public ConnectorSpec generateSpec(ConnectorContext connectorContext, ConnectorSpecRequest request) {
     Map<String, String> properties = new HashMap<>();
-    properties.put(KafkaConnectorConfig.BROKERS, config.getKafkaBrokers());
-    properties.put(KafkaSinkConnectorConfig.BROKERS, config.getKafkaBrokers());
+    properties.put(ConfigUtil.NAME_USE_CONNECTION, "true");
+    properties.put(ConfigUtil.NAME_CONNECTION, request.getConnectionWithMacro());
     properties.put(KafkaBatchConfig.FORMAT, "text");
     String topic = cleanse(request.getPath());
     if (!topic.isEmpty()) {
