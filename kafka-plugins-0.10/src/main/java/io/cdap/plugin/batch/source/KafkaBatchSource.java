@@ -131,15 +131,6 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
       return keytabLocation;
     }
 
-    public boolean useConnection() {
-      return useConnection == null ? false : useConnection;
-    }
-
-    @Nullable
-    public KafkaConnectorConfig getConnection() {
-      return connection;
-    }
-
     public Map<String, String> getKafkaProperties() {
       KeyValueListParser kvParser = new KeyValueListParser("\\s*,\\s*", ":");
       Map<String, String> conf = new HashMap<>();
@@ -153,14 +144,7 @@ public class KafkaBatchSource extends BatchSource<KafkaKey, KafkaMessage, Struct
 
     public void validate(FailureCollector collector) {
       super.validate(collector);
-      if (useConnection()) {
-        collector.addFailure("Kafka batch source plugin doesn't support using existing connection.",
-                             "Don't set useConnection property to true.");
-      }
-      if (containsMacro(ConfigUtil.NAME_CONNECTION)) {
-        collector.addFailure("Kafka batch source plugin doesn't support using existing connection.",
-                             "Remove macro in connection property.");
-      }
+      ConfigUtil.validateConnection(this, useConnection, connection, collector);
       KafkaHelpers.validateKerberosSetting(principal, keytabLocation, collector);
       if (connection != null && connection.getKafkaBrokers() != null) {
         parseBrokerMap(connection.getKafkaBrokers(), collector);

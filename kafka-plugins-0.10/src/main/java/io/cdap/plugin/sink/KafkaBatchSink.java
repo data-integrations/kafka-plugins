@@ -201,10 +201,6 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
     @Description("Compression type to be applied on message")
     @Macro
     private String compressionType;
-
-    public boolean useConnection() {
-      return useConnection != null && useConnection;
-    }
     
     public String getBrokers() {
       return connection == null ? null : connection.getBrokers();
@@ -223,14 +219,7 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
     }
 
     private void validate(FailureCollector collector) {
-      if (useConnection()) {
-        collector.addFailure("Kafka batch sink plugin doesn't support using existing connection.",
-                             "Don't set useConnection property to true.");
-      }
-      if (containsMacro(ConfigUtil.NAME_CONNECTION)) {
-        collector.addFailure("Kafka batch sink plugin doesn't support using existing connection.",
-                             "Remove macro in connection property.");
-      }
+      ConfigUtil.validateConnection(this, useConnection, connection, collector);
       if (!async.equalsIgnoreCase("true") && !async.equalsIgnoreCase("false")) {
         collector.addFailure("Async flag has to be either TRUE or FALSE.", null)
                 .withConfigProperty(ASYNC);
