@@ -12,10 +12,9 @@ compression types to events. This plugin uses kafka 0.10.2 java apis.
 
 Configuration
 -------------
-**Use Connection** Whether to use a connection, if a connection is used,
-the brokers do not need to be provided.
+**Use Connection** Whether to use a connection. If a connection is used, you do not need to provide the credentials.
 
-**Connection** Name of the connection to use, should have the macro function ${conn(connection-name)} to provide.
+**Connection** Name of the connection to use. Project and service account information will be provided by the connection. You can also use the macro function ${conn(connection_name)}.
 
 **referenceName:** This will be used to uniquely identify this sink for lineage, annotating metadata, etc.
 
