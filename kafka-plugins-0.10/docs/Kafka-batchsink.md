@@ -14,7 +14,7 @@ Configuration
 -------------
 **Use Connection** Whether to use a connection. If a connection is used, you do not need to provide the credentials.
 
-**Connection** Name of the connection to use. Project and service account information will be provided by the connection. You can also use the macro function ${conn(connection_name)}.
+**Connection** Name of the connection to use. Brokers information will be provided by the connection. You can also use the macro function ${conn(connection_name)}.
 
 **referenceName:** This will be used to uniquely identify this sink for lineage, annotating metadata, etc.
 
