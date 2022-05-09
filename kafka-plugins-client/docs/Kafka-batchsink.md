@@ -7,7 +7,7 @@ Kafka sink that allows you to write events into CSV or JSON to kafka.
 Plugin has the capability to push the data to a Kafka topic. It can also be
 configured to partition events being written to kafka based on a configurable key. 
 The sink can also be configured to operate in sync or async mode and apply different
-compression types to events. This plugin uses kafka 0.10.2 java apis.
+compression types to events. This plugin uses kafka 2.6 java apis.
 
 
 Configuration

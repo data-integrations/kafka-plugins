@@ -7,7 +7,7 @@ Kafka batch source. Emits the record from kafka. It will emit a record based on 
 you use, or if no schema or format is specified, the message payload will be emitted. The source will 
 remember the offset it read last run and continue from that offset for the next run.
 The Kafka batch source supports providing additional kafka properties for the kafka consumer, 
-reading from kerberos-enabled kafka and limiting the number of records read. This plugin uses kafka 0.10.2 java apis.
+reading from kerberos-enabled kafka and limiting the number of records read. This plugin uses kafka 2.6 java apis.
 
 Use Case
 --------

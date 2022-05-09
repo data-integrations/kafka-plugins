@@ -6,7 +6,7 @@ Description
 Kafka Alert Publisher that allows you to publish alerts to kafka as json objects.
 The plugin internally uses kafka producer apis to publish alerts. 
 The plugin allows to specify kafka topic to use for publishing and other additional
-kafka producer properties. This plugin uses kafka 0.10.2 java apis.
+kafka producer properties. This plugin uses kafka 2.6 java apis.
 
 
 Configuration
