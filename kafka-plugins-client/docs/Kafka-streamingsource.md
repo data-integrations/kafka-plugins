@@ -5,7 +5,7 @@ Description
 -----------
 Kafka streaming source. Emits a record with the schema specified by the user. If no schema
 is specified, it will emit a record with two fields: 'key' (nullable string) and 'message'
-(bytes). This plugin uses kafka 0.10.2 java apis.
+(bytes). This plugin uses kafka 2.6 java apis.
 
 
 Use Case
