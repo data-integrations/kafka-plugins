@@ -10,7 +10,7 @@ Kafka streaming source that emits a records with user specified schema.
 Usage Notes
 -----------
 
-Kafka Streaming Source can be used to read events from a kafka topic. It uses kafka consumer [0.10.2 apis](https://kafka.apache.org/0100/documentation.html) to read events from a kafka topic. Kafka Source converts incoming kafka events into cdap structured records which then can be used for further transformations.
+Kafka Streaming Source can be used to read events from a kafka topic. It uses kafka consumer [2.6 apis](https://kafka.apache.org/26/documentation.html) to read events from a kafka topic. Kafka Source converts incoming kafka events into cdap structured records which then can be used for further transformations.
 
 The source provides capabilities to read from latest offset or from beginning or from the provided kafka offset. The plugin relies on Spark Streaming offset [storage capabilities](https://spark.apache.org/docs/latest/streaming-kafka-0-10-integration.html) to manager offsets and checkpoints.
 

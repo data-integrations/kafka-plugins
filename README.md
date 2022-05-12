@@ -6,14 +6,10 @@ Kafka Plugins
 Kafka source and sink to read/write events to/from kafka. The plugins are broken down to two modules to support Kafka 0.8, 0.9 and 0.10.
 The kafka batch source is based on Apache Gobblin.
 
-* [Kafka Streaming Source for Kafka 8 and Onward](kafka-plugins-0.8/docs/KAFKASOURCE.md)
-* [Kafka Streaming Source for Kafka 10 and Onward](kafka-plugins-0.10/docs/KAFKASOURCE.md)
-* [Kafka Batch Source for for Kafka 8 and Onward](kafka-plugins-0.8/docs/KAFKABATCHSOURCE.md)
-* [Kafka Batch Source for Kafka 10 and Onward](kafka-plugins-0.10/docs/KAFKABATCHSOURCE.md)
-* [Kafka Batch Sink for for Kafka 8 and Onward](kafka-plugins-0.8/docs/KAFKAWRITER-SINK.md)
-* [Kafka Batch Sink for Kafka 10 and Onward](kafka-plugins-0.10/docs/KAFKAWRITER-SINK.md)
-* [Kafka Alert Publisher for Kafka 8 and Onward](kafka-plugins-0.8/docs/Kafka-alert-publisher.md)
-* [Kafka Alert Publisher for Kafka 10 and Onward](kafka-plugins-0.10/docs/Kafka-alert-publisher.md)
+* [Kafka Streaming Source for Kafka 10 and Onward](kafka-plugins-client/docs/KAFKASOURCE.md)
+* [Kafka Batch Source for Kafka 10 and Onward](kafka-plugins-client/docs/KAFKABATCHSOURCE.md)
+* [Kafka Batch Sink for Kafka 10 and Onward](kafka-plugins-client/docs/KAFKAWRITER-SINK.md)
+* [Kafka Alert Publisher for Kafka 10 and Onward](kafka-plugins-client/docs/Kafka-alert-publisher.md)
 
 Build
 -----
@@ -30,11 +26,7 @@ Deployment
 ----------
 You can deploy your plugins using the CDAP CLI:
 
-    > load artifact <target/kafka-plugins-<version>.jar config-file <target/kafka-plugins<version>.json>
-
-For example, if your artifact is named 'kafka-plugins-<version>':
-
-    > load artifact target/kafka-plugins-<version>.jar config-file target/kafka-plugins-<version>.json
+    > load artifact <kafka-plugins-client/target/kafka-plugins-client-<version>.jar config-file kafka-plugins-client/target/kafka-plugins-client-<version>.json
     
 ## Mailing Lists
 
@@ -54,7 +46,7 @@ CDAP IRC Channel: #cdap on irc.freenode.net
 
 ## License and Trademarks
 
-Copyright © 2017 Cask Data, Inc.
+Copyright © 2017-2022 Cask Data, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at

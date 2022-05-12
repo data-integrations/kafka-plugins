@@ -10,7 +10,7 @@ Kafka batch source that emits a records with user specified schema.
 Usage Notes
 -----------
 
-Kafka Batch Source can be used to read events from a kafka topic. It uses kafka consumer [0.10.2 apis](https://kafka.apache.org/0100/documentation.html) to read events from a kafka topic. The Kafka Batch Source supports providing additional kafka properties for the kafka consumer, reading from kerberos-enabled kafka and limiting the number of records read. Kafka Batch Source converts incoming kafka events into cdap structured records which then can be used for further transformations.
+Kafka Batch Source can be used to read events from a kafka topic. It uses kafka consumer [2.6 apis](https://kafka.apache.org/26/documentation.html) to read events from a kafka topic. The Kafka Batch Source supports providing additional kafka properties for the kafka consumer, reading from kerberos-enabled kafka and limiting the number of records read. Kafka Batch Source converts incoming kafka events into cdap structured records which then can be used for further transformations.
 
 The source will read from the earliest available offset or the initial offset that specified in the config for the first run, remember the last offset it read last run and continue from that offset for the next run. 
 
