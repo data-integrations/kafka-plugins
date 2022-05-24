@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 import io.cdap.cdap.api.data.format.FormatSpecification;
 import io.cdap.cdap.api.data.format.RecordFormat;
 import io.cdap.cdap.api.data.format.StructuredRecord;
+import io.cdap.cdap.api.data.format.UnexpectedFormatException;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.streaming.StreamingContext;
@@ -49,6 +50,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -277,12 +280,54 @@ final class KafkaStreamingSourceUtil {
       if (recordFormat == null) {
         Schema messageSchema = conf.getMessageSchema();
         FormatSpecification spec =
-          new FormatSpecification(conf.getFormat(), messageSchema, new HashMap<>());
+                new FormatSpecification(conf.getFormat(), messageSchema, new HashMap<>());
         recordFormat = RecordFormats.createInitializedFormat(spec);
       }
 
       StructuredRecord messageRecord = recordFormat.read(ByteBuffer.wrap(message));
+      Schema schema = messageRecord.getSchema();
+      LOG.info("MESSAGE RECORD SCHEMA- {}", schema);
+      LOG.info("MAP SCHEMA- {}", schema.getMapSchema());
+      LOG.info("COMPONENT SCHEMA- {}", schema.getComponentSchema());
+      LOG.info("FIELDS- {}", schema.getFields());
+      LOG.info("DISPLAY NAME- {}", schema.getDisplayName());
+      LOG.info("ENUM NAME- {}", schema.getEnumName());
+      LOG.info("ENUM VALUES- {}", schema.getEnumValues());
+      LOG.info("LOGICAL TYPE- {}", schema.getLogicalType());
+      LOG.info("PRECISION- {}", schema.getPrecision());
+      LOG.info("RECORD NAME- {}", schema.getRecordName());
+      LOG.info("SCALE- {}", schema.getScale());
+      LOG.info("SCHEMA HASH- {}", schema.getSchemaHash());
+      LOG.info("SCHEMA TYPE- {}", schema.getType().toString());
+
       for (Schema.Field field : messageRecord.getSchema().getFields()) {
+        if (field.getSchema().getType() == Schema.Type.STRING) {
+
+          LOG.info("SCHEMA FIELD - {}", field);
+          String fieldName = field.getName();
+          LOG.info("SCHEMA FIELD NAME - {}", fieldName);
+          String fieldValue = messageRecord.get(fieldName);
+          LOG.info("MESSAGE RECORD - {}", fieldValue);
+
+          LOG.info("Got message here: {}, {}, {}", recordFormat.getSchema(), recordFormat, message);
+
+          LOG.info("Got message record schema here: {}, {}, {}", messageRecord.getSchema(),
+                  messageRecord.get(field.getName()),
+                  field.getSchema().getLogicalType());
+
+          String value = messageRecord.get(field.getName());
+          //make sure value is in the right format for datetime
+          if (field.getSchema().getLogicalType() == Schema.LogicalType.DATETIME) {
+            try {
+              LocalDateTime.parse(value);
+            } catch (DateTimeParseException exception) {
+              throw new UnexpectedFormatException(
+                      String.format("Datetime field '%s' with value '%s' is not in ISO-8601 format.", field.getName(),
+                              value), exception);
+            }
+          }
+        }
+
         String fieldName = field.getName();
         builder.set(fieldName, messageRecord.get(fieldName));
       }
