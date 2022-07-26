@@ -11,7 +11,7 @@
 
   <name>Apache Kafka 0.10 plugins</name>
   <artifactId>kafka-plugins</artifactId>
-  <version>${project.parent.version}-0.10.2.0</version>
+  <version>${project.parent.version}-0.10.2.1-SNAPSHOT</version>
 
   <dependencies>
     <dependency>
