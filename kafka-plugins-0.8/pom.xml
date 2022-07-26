@@ -11,7 +11,7 @@
 
   <name>Apache Kafka 0.8 plugins</name>
   <artifactId>kafka-plugins</artifactId>
-  <version>${project.parent.version}-0.8.2.2</version>
+  <version>${project.parent.version}-0.8.2.3-SNAPSHOT</version>
 
   <dependencies>
     <dependency>
