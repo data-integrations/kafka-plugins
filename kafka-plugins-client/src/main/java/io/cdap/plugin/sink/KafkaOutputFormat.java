@@ -43,85 +43,84 @@ public class KafkaOutputFormat extends OutputFormat<Text, Text> {
   private KafkaProducer<String, String> producer;
 
   @Override
-  public void checkOutputSpecs(JobContext jobContext) throws IOException, InterruptedException {
+  public void checkOutputSpecs(JobContext jobContext) {
   }
 
   @Override
-  public OutputCommitter getOutputCommitter(TaskAttemptContext taskAttemptContext) throws IOException,
-    InterruptedException {
+  public OutputCommitter getOutputCommitter(TaskAttemptContext taskAttemptContext) {
     return new OutputCommitter() {
       @Override
-      public void setupJob(JobContext jobContext) throws IOException {
+      public void setupJob(JobContext jobContext) {
         // no-op
       }
 
       @Override
-      public void setupTask(TaskAttemptContext taskContext) throws IOException {
+      public void setupTask(TaskAttemptContext taskContext) {
         //no-op
       }
 
       @Override
-      public boolean needsTaskCommit(TaskAttemptContext taskContext) throws IOException {
+      public boolean needsTaskCommit(TaskAttemptContext taskContext) {
         return false;
       }
 
       @Override
-      public void commitTask(TaskAttemptContext taskContext) throws IOException {
+      public void commitTask(TaskAttemptContext taskContext) {
         //no-op
       }
 
       @Override
-      public void abortTask(TaskAttemptContext taskContext) throws IOException {
+      public void abortTask(TaskAttemptContext taskContext) {
         //no-op
       }
     };
   }
 
   @Override
-  public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
+  public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context) {
     Configuration configuration = context.getConfiguration();
 
     // Extract the topics
     String topic = configuration.get("topic");
 
-    Properties props = new Properties();
-    // Configure the properties for kafka.
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-              configuration.get(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-              configuration.get(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG));
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-              configuration.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
-    props.put("compression.type", configuration.get("compression.type"));
-
-    if (!Strings.isNullOrEmpty(configuration.get("hasKey"))) {
-      // set partitioner class only if key is provided
-      props.put("partitioner.class", "io.cdap.plugin.sink.StringPartitioner");
-    }
-
-    if (configuration.get("async") != null && configuration.get("async").equalsIgnoreCase("true")) {
-      props.put("producer.type", "async");
-      props.put(ProducerConfig.ACKS_CONFIG, "1");
-    } else {
-      props.put("producer.type", "sync");
-    }
-
-    Map<String, String> valByRegex = configuration.getValByRegex("^additional.");
-
-    for (Map.Entry<String, String> entry : valByRegex.entrySet()) {
-      //strip off the prefix we added while creating the conf.
-      props.put(entry.getKey().substring(11), entry.getValue());
-      LOG.info("Property key: {}, value: {}", entry.getKey().substring(11), entry.getValue());
-    }
-
-    // Add Kerberos login information if any
-    if (!Strings.isNullOrEmpty(configuration.get(KafkaHelpers.SASL_JAAS_CONFIG))) {
-      props.put(KafkaHelpers.SASL_JAAS_CONFIG, configuration.get(KafkaHelpers.SASL_JAAS_CONFIG));
-    }
-
     // CDAP-9178: cached the producer object to avoid being created on every batch interval
     if (producer == null) {
+      Properties props = new Properties();
+      // Configure the properties for kafka.
+      props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+              configuration.get(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
+      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+              configuration.get(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG));
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+              configuration.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+      props.put("compression.type", configuration.get("compression.type"));
+      props.put(ProducerConfig.LINGER_MS_CONFIG, 100);
+
+      if (!Strings.isNullOrEmpty(configuration.get("hasKey"))) {
+        // set partitioner class only if key is provided
+        props.put("partitioner.class", "io.cdap.plugin.sink.StringPartitioner");
+      }
+
+      if (configuration.get("async") != null && configuration.get("async").equalsIgnoreCase("true")) {
+        props.put("producer.type", "async");
+        props.put(ProducerConfig.ACKS_CONFIG, "1");
+      } else {
+        props.put("producer.type", "sync");
+      }
+
+      Map<String, String> valByRegex = configuration.getValByRegex("^additional.");
+
+      for (Map.Entry<String, String> entry : valByRegex.entrySet()) {
+        //strip off the prefix we added while creating the conf.
+        props.put(entry.getKey().substring(11), entry.getValue());
+        LOG.info("Property key: {}, value: {}", entry.getKey().substring(11), entry.getValue());
+      }
+
+      // Add Kerberos login information if any
+      if (!Strings.isNullOrEmpty(configuration.get(KafkaHelpers.SASL_JAAS_CONFIG))) {
+        props.put(KafkaHelpers.SASL_JAAS_CONFIG, configuration.get(KafkaHelpers.SASL_JAAS_CONFIG));
+      }
+
       producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
     }
 
