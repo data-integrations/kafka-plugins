@@ -21,17 +21,13 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Record writer to write events to kafka
  */
 public class KafkaRecordWriter extends RecordWriter<Text, Text> {
-  private static final Logger LOG = LoggerFactory.getLogger(KafkaRecordWriter.class);
   private KafkaProducer<String, String> producer;
   private String topic;
 
@@ -56,11 +52,11 @@ public class KafkaRecordWriter extends RecordWriter<Text, Text> {
     }
   }
 
-  private void sendMessage(final String key, final String body) throws IOException, InterruptedException {
-    try {
-      producer.send(new ProducerRecord<>(topic, key, body)).get();
-    } catch (ExecutionException e) {
-      throw new IOException(e.getCause());
-    }
+  private void sendMessage(final String key, final String body) {
+    producer.send(new ProducerRecord<>(topic, key, body), (metadata, exception) -> {
+      if (exception != null) {
+        throw new RuntimeException(exception);
+      }
+    });
   }
 }
