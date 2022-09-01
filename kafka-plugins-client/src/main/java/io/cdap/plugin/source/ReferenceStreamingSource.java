@@ -29,8 +29,9 @@ import io.cdap.plugin.common.ReferencePluginConfig;
  * call to make sure CDAP records that it was accessed.
  *
  * @param <T> type of object read by the source.
+ * @param <S> type of object read by the source.
  */
-public abstract class ReferenceStreamingSource<T> extends StreamingSource<T> {
+public abstract class ReferenceStreamingSource<T, S> extends StreamingSource<T, S> {
   private final ReferencePluginConfig conf;
 
   public ReferenceStreamingSource(ReferencePluginConfig conf) {
