@@ -32,7 +32,6 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.requests.ListOffsetRequest;
@@ -110,7 +109,7 @@ final class KafkaStreamingSourceUtil {
     };
   }
 
-  private static JavaInputDStream<ConsumerRecord<byte[], byte[]>> getRecordJavaDStream(
+  public static JavaInputDStream<ConsumerRecord<byte[], byte[]>> getRecordJavaDStream(
       StreamingContext context,
       KafkaConfig conf, FailureCollector collector) {
     Map<String, Object> kafkaParams = new HashMap<>();
@@ -192,7 +191,7 @@ final class KafkaStreamingSourceUtil {
   /**
    * Applies the format function to each rdd.
    */
-  private static class RecordTransform
+  public static class RecordTransform
       implements
       Function2<JavaRDD<ConsumerRecord<byte[], byte[]>>, Time, JavaRDD<StructuredRecord>> {
 
@@ -210,6 +209,17 @@ final class KafkaStreamingSourceUtil {
               new BytesFunction(batchTime.milliseconds(), conf) :
               new FormatFunction(batchTime.milliseconds(), conf);
       return input.map(recordFunction);
+    }
+  }
+
+  public static Function<ConsumerRecord<byte[], byte[]>, StructuredRecord>
+  getTransformFunction(KafkaConfig conf, long ts) {
+    return conf.getFormat() == null ? new BytesFunction(ts, conf) : new FormatFunction(ts, conf);
+  }
+
+  public static void print(OffsetRange[] offsetRanges) {
+    for (OffsetRange offsetRange : offsetRanges) {
+      LOG.info("Saving offset {} for partition {}", offsetRange.untilOffset(), offsetRange.partition());
     }
   }
 
@@ -294,7 +304,7 @@ final class KafkaStreamingSourceUtil {
    * Transforms kafka key and message into a structured record when message format is not given.
    * Everything here should be serializable, as Spark Streaming will serialize all functions.
    */
-  private static class BytesFunction extends BaseFunction {
+  public static class BytesFunction extends BaseFunction {
 
     BytesFunction(long ts, KafkaConfig conf) {
       super(ts, conf);
@@ -312,7 +322,7 @@ final class KafkaStreamingSourceUtil {
    * given. Everything here should be serializable, as Spark Streaming will serialize all
    * functions.
    */
-  private static class FormatFunction extends BaseFunction {
+  public static class FormatFunction extends BaseFunction {
 
     private transient RecordFormat<ByteBuffer, StructuredRecord> recordFormat;
 

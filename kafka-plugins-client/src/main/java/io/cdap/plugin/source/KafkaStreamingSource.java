@@ -28,9 +28,9 @@ import io.cdap.cdap.etl.api.streaming.StreamingContext;
 import io.cdap.cdap.etl.api.streaming.StreamingSource;
 import io.cdap.cdap.etl.api.streaming.StreamingSourceContext;
 import io.cdap.plugin.common.LineageRecorder;
-
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaInputDStream;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 @Name("Kafka")
 @Description("Kafka streaming source.")
 public class KafkaStreamingSource extends
-    ReferenceStreamingSource<StructuredRecord, ConsumerRecord<byte[], byte[]>> {
+  ReferenceStreamingSource<StructuredRecord, ConsumerRecord<byte[], byte[]>> {
   private final KafkaConfig conf;
 
   public KafkaStreamingSource(KafkaConfig conf) {
@@ -87,14 +87,10 @@ public class KafkaStreamingSource extends
     conf.getMessageSchema(collector);
     collector.getOrThrowException();
 
-    return KafkaStreamingSourceUtil.getStructuredRecordJavaDStream(context, conf, collector);
-  }
-
-  public JavaDStream<ConsumerRecord<byte[], byte[]>> getStatefulStream(StreamingContext context) throws Exception {
-    FailureCollector collector = context.getFailureCollector();
-    conf.getMessageSchema(collector);
-    collector.getOrThrowException();
-
-    return KafkaStreamingSourceUtil.getConsumerRecordJavaDStream(context, conf, collector);
+    JavaInputDStream<ConsumerRecord<byte[], byte[]>> recordJavaDStream =
+      KafkaStreamingSourceUtil.getRecordJavaDStream(context, conf, collector);
+    KafkaDStream kafkaDStream = new KafkaDStream(context.getSparkStreamingContext().ssc(),
+                                                              recordJavaDStream.inputDStream(), conf);
+    return kafkaDStream.convertToJavaDStream();
   }
 }
