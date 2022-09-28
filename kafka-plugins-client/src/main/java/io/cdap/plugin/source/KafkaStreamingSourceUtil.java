@@ -42,6 +42,7 @@ import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
@@ -57,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Util method for {@link KafkaStreamingSource}.
@@ -69,13 +71,15 @@ final class KafkaStreamingSourceUtil {
 
   /**
    * Returns {@link JavaDStream} for {@link KafkaStreamingSource}.
-   *
    * @param context streaming context
    * @param conf kafka conf
    * @param collector failure collector
+   * @param stateSupplier
+   * @return
    */
-  static JavaDStream<StructuredRecord> getStructuredRecordJavaDStream(
-    StreamingContext context, KafkaConfig conf, FailureCollector collector) {
+  static JavaInputDStream<ConsumerRecord<byte[], byte[]>> getConsumerRecordJavaDStream(
+    StreamingContext context, KafkaConfig conf, FailureCollector collector,
+    Supplier<Map<TopicPartition, Long>> stateSupplier) {
     Map<String, Object> kafkaParams = new HashMap<>();
     kafkaParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, conf.getBrokers());
     // Spark saves the offsets in checkpoints, no need for Kafka to save them
@@ -104,9 +108,7 @@ final class KafkaStreamingSourceUtil {
     }
     properties.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, requestTimeout);
     try (Consumer<byte[], byte[]> consumer = new KafkaConsumer<>(properties)) {
-      Map<TopicPartition, Long> offsets = conf.getInitialPartitionOffsets(
-        getPartitions(consumer, conf, collector), collector);
-      collector.getOrThrowException();
+      Map<TopicPartition, Long> offsets = getInitialPartitionOffsets(conf, stateSupplier, consumer, collector);
 
       // KafkaUtils doesn't understand -1 and -2 as smallest offset and latest offset.
       // so we have to replace them with the actual smallest and latest
@@ -141,12 +143,18 @@ final class KafkaStreamingSourceUtil {
       return KafkaUtils.createDirectStream(
         context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
         ConsumerStrategies.<byte[], byte[]>Subscribe(Collections.singleton(conf.getTopic()), kafkaParams, offsets)
-      ).transform(new RecordTransform(conf));
+      );
     } catch (KafkaException e) {
       LOG.error("Exception occurred while trying to read from kafka topic: {}", e.getMessage());
       LOG.error("Please verify that the hostname/IPAddress of the kafka server is correct and that it is running.");
       throw e;
     }
+  }
+
+  static JavaDStream<StructuredRecord> getStructuredRecordJavaDStream(KafkaConfig conf,
+                                                                      JavaInputDStream<ConsumerRecord<byte[], byte[]>>
+                                                                        consumerRecordJavaInputDStream) {
+    return consumerRecordJavaInputDStream.transform(new RecordTransform(conf));
   }
 
   /**
@@ -168,6 +176,32 @@ final class KafkaStreamingSourceUtil {
         new FormatFunction(batchTime.milliseconds(), conf);
       return input.map(recordFunction);
     }
+  }
+
+  static Map<TopicPartition, Long> getInitialPartitionOffsets(KafkaConfig conf,
+                                                              Supplier<Map<TopicPartition, Long>> stateSupplier,
+                                                              Consumer<byte[], byte[]> consumer,
+                                                              FailureCollector collector) {
+    Map<TopicPartition, Long> savedPartitions = stateSupplier.get();
+    if (!savedPartitions.isEmpty()) {
+      LOG.info("Saved partitions found {}. ", savedPartitions);
+      return savedPartitions;
+    }
+
+    LOG.info("No saved partitions found.");
+    Map<TopicPartition, Long> offsets = conf.getInitialPartitionOffsets(
+      getPartitions(consumer, conf, collector), collector);
+    collector.getOrThrowException();
+    return offsets;
+  }
+
+  static Function2<ConsumerRecord<byte[], byte[]>, Time, StructuredRecord>
+  getRecordTransformFunction(KafkaConfig conf) {
+    return (consumerRecord, batchTime) -> {
+      BaseFunction baseFunction = conf.getFormat() == null ?
+        new BytesFunction(batchTime.milliseconds(), conf) : new FormatFunction(batchTime.milliseconds(), conf);
+      return baseFunction.call(consumerRecord);
+    };
   }
 
   private static Set<Integer> getPartitions(Consumer<byte[], byte[]> consumer, KafkaConfig conf,

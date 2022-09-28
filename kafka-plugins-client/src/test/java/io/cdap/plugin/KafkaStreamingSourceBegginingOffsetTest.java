@@ -35,7 +35,6 @@ import io.cdap.cdap.etl.mock.test.HydratorTestBase;
 import io.cdap.cdap.etl.proto.v2.DataStreamsConfig;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.etl.proto.v2.ETLStage;
-import io.cdap.cdap.proto.ProgramRunStatus;
 import io.cdap.cdap.proto.artifact.AppRequest;
 import io.cdap.cdap.proto.id.ApplicationId;
 import io.cdap.cdap.proto.id.ArtifactId;
@@ -47,7 +46,6 @@ import io.cdap.cdap.test.TestConfiguration;
 import io.cdap.plugin.common.http.HTTPPollConfig;
 import io.cdap.plugin.source.KafkaStreamingSource;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -67,15 +65,18 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static io.cdap.plugin.source.KafkaConfig.OFFSET_START_FROM_BEGINNING;
-import static io.cdap.plugin.source.KafkaConfig.OFFSET_START_FROM_LAST_OFFSET;
 
 /**
  * Tests for Spark plugins.
  */
 public class KafkaStreamingSourceBegginingOffsetTest extends HydratorTestBase {
 
+  // Explicitly turn off state tracking to ensure checkpointing is on.
+  // This test needs a fix to work with checkpointing disabled. See PLUGIN-1414
   @ClassRule
-  public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
+  public static final TestConfiguration CONFIG =
+    new TestConfiguration("explore.enabled", false,
+                          "feature.streaming.pipeline.native.state.tracking.enabled", "false");
 
   private static final ArtifactId DATAPIPELINE_ARTIFACT_ID =
     NamespaceId.DEFAULT.artifact("data-pipeline", "4.3.2");
