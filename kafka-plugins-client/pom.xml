@@ -236,7 +236,7 @@
         <version>3.5.1</version>
         <configuration>
           <instructions>
-            <_exportcontents>io.cdap.plugin.*;org.apache.spark.streaming.kafka010.*;
+            <_exportcontents>io.cdap.plugin.kafka.*;org.apache.spark.streaming.kafka010.*;
               org.apache.kafka.*;com.google.common.base.*;</_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
