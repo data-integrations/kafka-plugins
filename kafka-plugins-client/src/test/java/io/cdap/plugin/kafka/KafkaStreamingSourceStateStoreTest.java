@@ -57,12 +57,10 @@ import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -218,13 +216,15 @@ public class KafkaStreamingSourceStateStoreTest extends HydratorTestBase {
       }, 2, TimeUnit.MINUTES);
 
     // Verify that state is saved with the next offset to start from.
-    Optional<byte[]> savedState = appStateStore.getState(SRC_STAGE_NAME + "." + TOPIC_NAME);
-    Assert.assertTrue(savedState.isPresent());
-    try (Reader reader = new InputStreamReader(new ByteArrayInputStream(savedState.get()), StandardCharsets.UTF_8)) {
-      KafkaPartitionOffsets partitionOffsets = GSON.fromJson(reader, KafkaPartitionOffsets.class);
-      Long savedOffset = partitionOffsets.getPartitionOffsets().get(0);
-      Assert.assertEquals(3L, savedOffset.longValue());
-    }
+    Tasks.waitFor(3L, () -> {
+      Optional<byte[]> savedState = appStateStore.getState(SRC_STAGE_NAME + "." + TOPIC_NAME);
+      try (Reader reader = new InputStreamReader(new ByteArrayInputStream(savedState.get()),
+          StandardCharsets.UTF_8)) {
+        KafkaPartitionOffsets partitionOffsets = GSON.fromJson(reader, KafkaPartitionOffsets.class);
+        Long savedOffset = partitionOffsets.getPartitionOffsets().get(0);
+        return savedOffset.longValue();
+      }
+    }, 2, TimeUnit.MINUTES);
 
     // stop the run
     sparkManager.stop();
