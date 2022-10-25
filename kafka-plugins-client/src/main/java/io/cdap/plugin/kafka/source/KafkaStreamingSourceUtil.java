@@ -170,10 +170,11 @@ final class KafkaStreamingSourceUtil {
 
     @Override
     public JavaRDD<StructuredRecord> call(JavaRDD<ConsumerRecord<byte[], byte[]>> input, Time batchTime) {
-      Function<ConsumerRecord<byte[], byte[]>, StructuredRecord> recordFunction = conf.getFormat() == null ?
-        new BytesFunction(batchTime.milliseconds(), conf) :
-        new FormatFunction(batchTime.milliseconds(), conf);
-      return input.map(recordFunction);
+      Function2<ConsumerRecord<byte[], byte[]>, Time, StructuredRecord> recordFunction = conf.getFormat() == null ?
+        new BytesFunction(conf) :
+        new FormatFunction(conf);
+      return input.map((Function<ConsumerRecord<byte[], byte[]>, StructuredRecord>) consumerRecord ->
+        recordFunction.call(consumerRecord, batchTime));
     }
   }
 
@@ -196,11 +197,7 @@ final class KafkaStreamingSourceUtil {
 
   static Function2<ConsumerRecord<byte[], byte[]>, Time, StructuredRecord>
   getRecordTransformFunction(KafkaConfig conf) {
-    return (consumerRecord, batchTime) -> {
-      BaseFunction baseFunction = conf.getFormat() == null ?
-        new BytesFunction(batchTime.milliseconds(), conf) : new FormatFunction(batchTime.milliseconds(), conf);
-      return baseFunction.call(consumerRecord);
-    };
+    return conf.getFormat() == null ? new BytesFunction(conf) : new FormatFunction(conf);
   }
 
   private static Set<Integer> getPartitions(Consumer<byte[], byte[]> consumer, KafkaConfig conf,
@@ -223,8 +220,8 @@ final class KafkaStreamingSourceUtil {
    * Common logic for transforming kafka key, message, partition, and offset into a structured record.
    * Everything here should be serializable, as Spark Streaming will serialize all functions.
    */
-  private abstract static class BaseFunction implements Function<ConsumerRecord<byte[], byte[]>, StructuredRecord> {
-    private final long ts;
+  private abstract static class BaseFunction implements
+    Function2<ConsumerRecord<byte[], byte[]>, Time, StructuredRecord> {
     protected final KafkaConfig conf;
     private transient String messageField;
     private transient String timeField;
@@ -233,13 +230,12 @@ final class KafkaStreamingSourceUtil {
     private transient String offsetField;
     private transient Schema schema;
 
-    BaseFunction(long ts, KafkaConfig conf) {
-      this.ts = ts;
+    BaseFunction(KafkaConfig conf) {
       this.conf = conf;
     }
 
     @Override
-    public StructuredRecord call(ConsumerRecord<byte[], byte[]> in) throws Exception {
+    public StructuredRecord call(ConsumerRecord<byte[], byte[]> in, Time batchTime) throws Exception {
       // first time this was called, initialize schema and time, key, and message fields.
       if (schema == null) {
         schema = conf.getSchema();
@@ -258,7 +254,7 @@ final class KafkaStreamingSourceUtil {
 
       StructuredRecord.Builder builder = StructuredRecord.builder(schema);
       if (timeField != null) {
-        builder.set(timeField, ts);
+        builder.set(timeField, batchTime.milliseconds());
       }
       if (keyField != null) {
         builder.set(keyField, in.key());
@@ -283,8 +279,8 @@ final class KafkaStreamingSourceUtil {
    */
   private static class BytesFunction extends BaseFunction {
 
-    BytesFunction(long ts, KafkaConfig conf) {
-      super(ts, conf);
+    BytesFunction(KafkaConfig conf) {
+      super(conf);
     }
 
     @Override
@@ -300,8 +296,8 @@ final class KafkaStreamingSourceUtil {
   private static class FormatFunction extends BaseFunction {
     private transient RecordFormat<ByteBuffer, StructuredRecord> recordFormat;
 
-    FormatFunction(long ts, KafkaConfig conf) {
-      super(ts, conf);
+    FormatFunction(KafkaConfig conf) {
+      super(conf);
     }
 
     @Override
