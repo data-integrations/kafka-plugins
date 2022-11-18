@@ -39,6 +39,7 @@ import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.kafka010.OffsetRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -49,6 +50,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -131,13 +137,42 @@ public class KafkaStreamingSource extends ReferenceStreamingSource<StructuredRec
     };
   }
 
-  private void saveState(StreamingContext context, OffsetRange[] offsetRanges) throws IOException {
+  private void saveState(StreamingContext context, OffsetRange[] offsetRanges) throws IOException,
+    InterruptedException {
     if (offsetRanges.length > 0) {
       Map<Integer, Long> partitionOffsetMap = Arrays.stream(offsetRanges)
         .collect(Collectors.toMap(OffsetRange::partition, OffsetRange::untilOffset));
       byte[] state = gson.toJson(new KafkaPartitionOffsets(partitionOffsetMap)).getBytes(StandardCharsets.UTF_8);
       context.saveState(conf.getTopic(), state);
+      //Test thousand concurrent runs with 1MB each
+
+      Map<Integer, Long> testPartitionOffsetMap = new HashMap<>();
+      for (int i = 0; i < 100000; i++) {
+        testPartitionOffsetMap.put(i, new Random().nextLong());
+      }
+      byte[] largeState = gson.toJson(new KafkaPartitionOffsets(testPartitionOffsetMap)).
+        getBytes(StandardCharsets.UTF_8);
+      LOG.info("state size is {} ", largeState.length);
+      int count = 1000;
+      ExecutorService executorService = Executors.newFixedThreadPool(count);
+      Runnable[] runnables = new Runnable[count];
+      for (int i = 0; i < count; i++) {
+        runnables[i] = getRunnable(context, largeState);
+        executorService.submit(runnables[i]);
+      }
+      executorService.shutdown();
+      executorService.awaitTermination(30, TimeUnit.SECONDS);
     }
+  }
+
+  private Runnable getRunnable(StreamingContext context, byte[] state) {
+    return () -> {
+      try {
+        context.saveState(conf.getTopic() + UUID.randomUUID(), state);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    };
   }
 
   private Supplier<Map<TopicPartition, Long>> getStateSupplier(StreamingContext context) {
