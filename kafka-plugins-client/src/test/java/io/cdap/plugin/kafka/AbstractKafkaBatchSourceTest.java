@@ -38,7 +38,6 @@ import io.cdap.cdap.proto.id.ArtifactId;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.test.ApplicationManager;
 import io.cdap.cdap.test.DataSetManager;
-import io.cdap.cdap.test.TestConfiguration;
 import io.cdap.cdap.test.WorkflowManager;
 import io.cdap.plugin.kafka.batch.source.KafkaBatchConfig;
 import io.cdap.plugin.kafka.batch.source.KafkaPartitionOffsets;
@@ -51,7 +50,6 @@ import org.apache.zookeeper.server.ZooKeeperServer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.File;
@@ -71,8 +69,6 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractKafkaBatchSourceTest extends HydratorTestBase {
 
   private static final ArtifactSummary APP_ARTIFACT = new ArtifactSummary("data-pipeline", "1.0.0");
-  @ClassRule
-  public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
   private static final int ZOOKEEPER_TICK_TIME = 1000;
   private static final int ZOOKEEPER_MAX_CONNECTIONS = 100;
 

@@ -76,8 +76,7 @@ public class KafkaStreamingSourceStateStoreFailureTest extends HydratorTestBase 
   // Turn on state tracking.
   @ClassRule
   public static final TestConfiguration CONFIG =
-    new TestConfiguration("explore.enabled", false,
-                          "feature.streaming.pipeline.native.state.tracking.enabled", "true");
+    new TestConfiguration("feature.streaming.pipeline.native.state.tracking.enabled", "true");
   private static final Gson GSON = new Gson();
 
   private static final ArtifactId DATASTREAMS_ARTIFACT_ID =
