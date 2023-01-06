@@ -61,6 +61,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -81,8 +82,7 @@ public class KafkaStreamingSourceStateStoreTest extends HydratorTestBase {
   // Turn on state tracking.
   @ClassRule
   public static final TestConfiguration CONFIG =
-    new TestConfiguration("explore.enabled", false,
-                          "feature.streaming.pipeline.native.state.tracking.enabled", "true");
+    new TestConfiguration("feature.streaming.pipeline.native.state.tracking.enabled", "true");
   private static final Gson GSON = new Gson();
 
   private static final ArtifactId DATASTREAMS_ARTIFACT_ID =

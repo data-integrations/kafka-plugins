@@ -75,8 +75,7 @@ public class KafkaStreamingSourceLastOffsetTest extends HydratorTestBase {
   // This test needs a fix to work with checkpointing disabled. See PLUGIN-1414
   @ClassRule
   public static final TestConfiguration CONFIG =
-    new TestConfiguration("explore.enabled", false,
-                          "feature.streaming.pipeline.native.state.tracking.enabled", "false");
+    new TestConfiguration("feature.streaming.pipeline.native.state.tracking.enabled", "false");
 
   private static final ArtifactId DATAPIPELINE_ARTIFACT_ID =
     NamespaceId.DEFAULT.artifact("data-pipeline", "4.3.2");
