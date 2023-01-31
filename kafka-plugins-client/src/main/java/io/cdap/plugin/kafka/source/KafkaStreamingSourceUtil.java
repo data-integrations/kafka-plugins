@@ -16,6 +16,7 @@
 
 package io.cdap.plugin.kafka.source;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -58,6 +59,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Util method for {@link KafkaStreamingSource}.
@@ -185,6 +187,8 @@ final class KafkaStreamingSourceUtil {
     Map<TopicPartition, Long> savedPartitions = stateSupplier.get();
     if (!savedPartitions.isEmpty()) {
       LOG.info("Saved partitions found {}. ", savedPartitions);
+      validateSavedPartitions(savedPartitions, KafkaHelpers.getEarliestOffsets(consumer, savedPartitions.keySet()),
+                              KafkaHelpers.getLatestOffsets(consumer, savedPartitions.keySet()));
       return savedPartitions;
     }
 
@@ -193,6 +197,26 @@ final class KafkaStreamingSourceUtil {
       getPartitions(consumer, conf, collector), collector);
     collector.getOrThrowException();
     return offsets;
+  }
+
+  @VisibleForTesting
+  static void validateSavedPartitions(Map<TopicPartition, Long> savedPartitions,
+                                      Map<TopicPartition, Long> earliestOffsets,
+                                      Map<TopicPartition, Long> latestOffsets) {
+    String errorString = savedPartitions.keySet().
+      stream().
+      filter(topicPartition -> savedPartitions.get(topicPartition) < earliestOffsets.get(topicPartition)
+        || savedPartitions.get(topicPartition) > latestOffsets.get(topicPartition)).
+      map(topicPartition -> String.format(
+        "Invalid offset %d for topic %s, partition %d. Earliest offset is %d and latest offset is %d.",
+        savedPartitions.get(topicPartition), topicPartition.topic(), topicPartition.partition(),
+        earliestOffsets.get(topicPartition), latestOffsets.get(topicPartition))).
+      collect(Collectors.joining("\n"));
+    if (errorString.isEmpty()) {
+      return;
+    }
+
+    throw new IllegalArgumentException(String.format("Problem with saved offsets:\n%s", errorString));
   }
 
   static Function2<ConsumerRecord<byte[], byte[]>, Time, StructuredRecord>

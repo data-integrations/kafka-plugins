@@ -23,8 +23,9 @@ import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
@@ -49,7 +50,10 @@ public final class KafkaHelpers {
    * @return Mapping of topic-partiton to its latest offset
    */
   public static <K, V> Map<TopicPartition, Long> getLatestOffsets(Consumer<K, V> consumer,
-                                                                  List<TopicPartition> topicAndPartitions) {
+                                                                  Collection<TopicPartition> topicAndPartitions) {
+    if (topicAndPartitions.isEmpty()) {
+      return Collections.emptyMap();
+    }
     consumer.assign(topicAndPartitions);
     consumer.seekToEnd(topicAndPartitions);
 
@@ -69,7 +73,10 @@ public final class KafkaHelpers {
    * @return Mapping of topic-partiton to its earliest offset
    */
   public static <K, V> Map<TopicPartition, Long> getEarliestOffsets(Consumer<K, V> consumer,
-                                                                    List<TopicPartition> topicAndPartitions) {
+                                                                    Collection<TopicPartition> topicAndPartitions) {
+    if (topicAndPartitions.isEmpty()) {
+      return Collections.emptyMap();
+    }
     consumer.assign(topicAndPartitions);
     consumer.seekToBeginning(topicAndPartitions);
 
