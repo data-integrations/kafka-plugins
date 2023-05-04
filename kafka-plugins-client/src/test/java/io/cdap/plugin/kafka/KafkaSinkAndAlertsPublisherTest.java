@@ -86,6 +86,7 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
 
   @Before
   public void setupTestClass() throws Exception {
+    clear();
     ArtifactId parentArtifact = NamespaceId.DEFAULT.artifact(APP_ARTIFACT.getName(), APP_ARTIFACT.getVersion());
 
     // add the data-pipeline artifact and mock plugins
@@ -179,8 +180,7 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
     // create the pipeline
     ApplicationId pipelineId = NamespaceId.DEFAULT.app("testKafkaSink");
     ApplicationManager appManager = deployApplication(pipelineId, new AppRequest<>(APP_ARTIFACT, pipelineConfig));
-
-
+    
     Set<String> expected = ImmutableSet.of("100,samuel,jackson",
                                            "200,dwayne,johnson",
                                            "300,christopher,walken",
@@ -228,7 +228,81 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
                                                                     return GSON.fromJson(s, Alert.class);
                                                                   }
                                                                 }
-                                                                )));
+                        )));
+  }
+
+  @Test
+  public void testKafkaSinkAndAlertsPublisherWithNullKey() throws Exception {
+    Schema schema = Schema.recordOf(
+      "user",
+      Schema.Field.of("id", Schema.nullableOf(Schema.of(Schema.Type.LONG))),
+      Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
+      Schema.Field.of("last", Schema.of(Schema.Type.NULL)));
+
+    // create the pipeline config
+    String inputName = "sinkTestInput";
+
+    String usersTopic = "records";
+    Map<String, String> sinkProperties = new HashMap<>();
+    sinkProperties.put("brokers", "localhost:" + kafkaPort);
+    sinkProperties.put("referenceName", "kafkaTest");
+    sinkProperties.put("topic", usersTopic);
+    sinkProperties.put("schema", schema.toString());
+    sinkProperties.put("format", "csv");
+    sinkProperties.put("key", "last");
+    sinkProperties.put("async", "FALSE");
+    sinkProperties.put("compressionType", "none");
+
+    ETLStage source = new ETLStage("source", MockSource.getPlugin(inputName));
+    ETLStage sink =
+      new ETLStage("sink", new ETLPlugin("Kafka", KafkaBatchSink.PLUGIN_TYPE, sinkProperties, null));
+
+    ETLBatchConfig pipelineConfig = ETLBatchConfig.builder("* * * * *")
+      .addStage(source)
+      .addStage(sink)
+      .addConnection(source.getName(), sink.getName())
+      .build();
+
+    // create the pipeline
+    ApplicationId pipelineId = NamespaceId.DEFAULT.app("testKafkaSink");
+    ApplicationManager appManager = deployApplication(pipelineId, new AppRequest<>(APP_ARTIFACT, pipelineConfig));
+    
+    Set<String> expected = ImmutableSet.of("100,samuel,jackson",
+                                           "200,dwayne,johnson",
+                                           "300,christopher,walken",
+                                           "400,donald,trump");
+
+    List<StructuredRecord> records = new ArrayList<>();
+    for (String e : expected) {
+      String[] splits = e.split(",");
+      StructuredRecord record =
+        StructuredRecord.builder(schema)
+          .set("id", Long.parseLong(splits[0]))
+          .set("first", splits[1])
+          .set("last", splits[2])
+          .build();
+      records.add(record);
+    }
+
+    // Add a record with null key
+    StructuredRecord recordWithNullKey =
+      StructuredRecord.builder(schema)
+        .set("id", 500L)
+        .set("first", "terry")
+        .set("last", null)
+        .build();
+    records.add(recordWithNullKey);
+
+    DataSetManager<Table> sourceTable = getDataset(inputName);
+    MockSource.writeInput(sourceTable, records);
+
+    WorkflowManager workflowManager = appManager.getWorkflowManager(SmartWorkflow.NAME);
+    try {
+      workflowManager.start();
+      workflowManager.waitForRun(ProgramRunStatus.COMPLETED, 1, TimeUnit.MINUTES);
+    } catch (Exception e) {
+      Assert.assertTrue(workflowManager.getHistory(ProgramRunStatus.FAILED).size() == 1);
+    }
   }
 
   private Set<String> readKafkaRecords(String topic, final int maxMessages) throws InterruptedException {
