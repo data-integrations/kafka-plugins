@@ -47,7 +47,7 @@ public class KafkaPartitionOffsets {
   }
 
   public void setPartitionOffset(int partition, long offset) {
-    partitionOffsets.computeIfPresent(partition, (k, v) -> offset);
+    partitionOffsets.put(partition, offset);
   }
 
   public long getPartitionOffset(int partition, long defaultValue) {
