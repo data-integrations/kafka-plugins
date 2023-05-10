@@ -5,7 +5,7 @@
   <parent>
     <artifactId>kafka-plugins</artifactId>
     <groupId>io.cdap.plugin</groupId>
-    <version>3.2.1-SNAPSHOT</version>
+    <version>3.2.1</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -258,8 +258,8 @@
         <version>1.1.0</version>
         <configuration>
           <cdapArtifacts>
-            <parent>system:cdap-data-pipeline[6.8.0-SNAPSHOT,7.0.0-SNAPSHOT)</parent>
-            <parent>system:cdap-data-streams[6.8.0-SNAPSHOT,7.0.0-SNAPSHOT)</parent>
+            <parent>system:cdap-data-pipeline[6.8.0,7.0.0)</parent>
+            <parent>system:cdap-data-streams[6.8.0,7.0.0)</parent>
           </cdapArtifacts>
         </configuration>
         <executions>
