@@ -118,7 +118,13 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
         emitter.emit(new KeyValue<>((Text) null, new Text(body)));
       } else {
         String key = input.get(producerConfig.key);
-        emitter.emit(new KeyValue<>(new Text(key), new Text(body)));
+        // The key inside the message may be null if it is not specified while publishing the event.
+        // https://stackoverflow.com/questions/29511521
+        if (key != null) {
+          emitter.emit(new KeyValue<>(new Text(key), new Text(body)));
+        } else {
+          throw new RuntimeException("Message Key field value in the record is null");
+        }
       }
   }
 
