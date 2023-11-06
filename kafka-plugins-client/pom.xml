@@ -174,7 +174,7 @@
     <dependency>
       <groupId>io.cdap.cdap</groupId>
       <artifactId>cdap-data-streams3_2.12</artifactId>
-      <version>${cdap.version}</version>
+      <version>6.8.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -237,7 +237,8 @@
         <configuration>
           <instructions>
             <_exportcontents>io.cdap.plugin.*;org.apache.spark.streaming.kafka010.*;
-              org.apache.kafka.*;com.google.common.base.*;</_exportcontents>
+              org.apache.kafka.*;com.google.common.base.*;
+            </_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
             <Embed-Directory>lib</Embed-Directory>
