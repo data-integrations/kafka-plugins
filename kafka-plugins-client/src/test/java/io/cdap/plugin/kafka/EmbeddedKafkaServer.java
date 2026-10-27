@@ -62,6 +62,16 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
     this.properties.putAll(properties);
   }
 
+  public State startAndWait() {
+    startAsync().awaitRunning();
+    return state();
+  }
+
+  public State stopAndWait() {
+    stopAsync().awaitTerminated();
+    return state();
+  }
+
   @Override
   protected void startUp() throws Exception {
     int tries = 0;

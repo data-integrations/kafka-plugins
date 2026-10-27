@@ -33,6 +33,12 @@
       <artifactId>cdap-data-pipeline3_2.12</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
