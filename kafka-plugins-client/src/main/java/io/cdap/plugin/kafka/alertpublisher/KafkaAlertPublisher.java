@@ -78,6 +78,9 @@ public class KafkaAlertPublisher extends AlertPublisher {
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
     props.put("producer.type", "sync");
+    // Kafka clients 3.0+ enable idempotence by default, which needs acks=all and IDEMPOTENT_WRITE on the
+    // cluster. Keep the 2.x behavior; users can still turn it on through producerProperties.
+    props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "false");
 
     // Override any property set above with user specified producer properties
     for (Map.Entry<String, String> producerProperty : config.getProducerProperties().entrySet()) {
