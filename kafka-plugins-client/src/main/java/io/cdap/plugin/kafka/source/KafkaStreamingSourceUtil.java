@@ -35,7 +35,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.requests.ListOffsetRequest;
+import org.apache.kafka.common.requests.ListOffsetsRequest;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
@@ -118,9 +118,9 @@ final class KafkaStreamingSourceUtil {
       for (Map.Entry<TopicPartition, Long> entry : offsets.entrySet()) {
         TopicPartition topicAndPartition = entry.getKey();
         Long offset = entry.getValue();
-        if (offset == ListOffsetRequest.EARLIEST_TIMESTAMP) {
+        if (offset == ListOffsetsRequest.EARLIEST_TIMESTAMP) {
           earliestOffsetRequest.add(topicAndPartition);
-        } else if (offset == ListOffsetRequest.LATEST_TIMESTAMP) {
+        } else if (offset == ListOffsetsRequest.LATEST_TIMESTAMP) {
           latestOffsetRequest.add(topicAndPartition);
         }
       }
