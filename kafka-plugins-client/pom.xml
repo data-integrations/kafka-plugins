@@ -50,6 +50,8 @@
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.12</artifactId>
       <version>${kafka.version}</version>
+      <!-- Embedded Kafka broker for unit tests only; plugin code uses kafka-clients. -->
+      <scope>test</scope>
       <exclusions>
         <exclusion>
           <groupId>org.slf4j</groupId>
@@ -188,11 +190,13 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <version>${netty.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cdap.http</groupId>
       <artifactId>netty-http</artifactId>
       <version>${netty-http.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
