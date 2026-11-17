@@ -88,8 +88,21 @@
     <main.basedir>${project.basedir}</main.basedir>
     <logback.version>1.0.9</logback.version>
     <slf4j.version>1.7.25</slf4j.version>
-    <jackson.version>2.10.5.1</jackson.version>
+    <jackson.version>2.23.0</jackson.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Align every Jackson 2 module (core, databind, annotations, dataformats, modules). -->
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
