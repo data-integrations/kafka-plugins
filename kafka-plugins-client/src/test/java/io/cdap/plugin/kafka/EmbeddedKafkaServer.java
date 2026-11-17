@@ -19,26 +19,20 @@ package io.cdap.plugin.kafka;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.AbstractIdleService;
-import kafka.metrics.KafkaMetricsReporter;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.zookeeper.ZooKeeperClientExpiredException;
 import kafka.zookeeper.ZooKeeperClientTimeoutException;
-import org.apache.kafka.common.errors.TimeoutException;
 import org.apache.kafka.common.utils.Time;
 import org.apache.twill.internal.utils.Networks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
-import scala.collection.JavaConverters;
-import scala.collection.Seq;
 
 import java.net.BindException;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /**
  * A {@link com.google.common.util.concurrent.Service} implementation for running an instance of Kafka server in
@@ -84,7 +78,7 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
           LOG.warn("Session expired when connecting to ZooKeeper from KafkaServer. Attempt number {}.",
                    tries, rootCause);
         } else if (rootCause instanceof BindException) {
-          LOG.warn("Kafka failed to bind to port {}. Attempt number {}.", kafkaConfig.port(), tries, rootCause);
+          LOG.warn("Kafka failed to bind to {}. Attempt number {}.", kafkaConfig.listeners(), tries, rootCause);
         } else {
           LOG.error("Exception when connecting to Zookeeper", e);
           throw e;
@@ -109,46 +103,7 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
   }
 
   private KafkaServer createKafkaServer(KafkaConfig kafkaConfig) {
-    Seq<KafkaMetricsReporter> metricsReporters =
-      JavaConverters.collectionAsScalaIterableConverter(
-        Collections.<KafkaMetricsReporter>emptyList()).asScala().toSeq();
-    return new KafkaServer(kafkaConfig, new Time() {
-
-      @Override
-      public long milliseconds() {
-        return System.currentTimeMillis();
-      }
-
-      @Override
-      public long nanoseconds() {
-        return System.nanoTime();
-      }
-
-      @Override
-      public void sleep(long ms) {
-        try {
-          Thread.sleep(ms);
-        } catch (InterruptedException e) {
-          Thread.interrupted();
-        }
-      }
-
-      @Override
-      public void waitObject(Object o, Supplier<Boolean> condition, long deadlineMs) throws InterruptedException {
-        while (!condition.get()) {
-          long currentTimeMs = this.milliseconds();
-          if (currentTimeMs >= deadlineMs) {
-            throw new TimeoutException("Condition not satisfied before deadline");
-          }
-          o.wait(deadlineMs - currentTimeMs);
-        }
-      }
-
-      @Override
-      public long hiResClockMs() {
-        return System.currentTimeMillis();
-      }
-    }, Option.apply("embedded-server"), metricsReporters);
+    return new KafkaServer(kafkaConfig, Time.SYSTEM, Option.apply("embedded-server"), false);
   }
 
   /**
@@ -163,8 +118,11 @@ public final class EmbeddedKafkaServer extends AbstractIdleService {
     if (port == null || "0".equals(port)) {
       int randomPort = Networks.getRandomPort();
       Preconditions.checkState(randomPort > 0, "Failed to get random port.");
-      prop.setProperty("port", Integer.toString(randomPort));
+      port = Integer.toString(randomPort);
     }
+    // Kafka 3.0 removed the "port" broker property; translate it to a PLAINTEXT listener.
+    prop.remove("port");
+    prop.setProperty("listeners", "PLAINTEXT://localhost:" + port);
 
     return new KafkaConfig(prop);
   }
