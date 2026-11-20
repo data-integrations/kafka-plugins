@@ -111,7 +111,7 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
     // Initialize kafka server
     kafkaPort = Networks.getRandomPort();
     kafkaServer = new EmbeddedKafkaServer(generateKafkaConfig(zkConnectionString, kafkaPort, TMP_FOLDER.newFolder()));
-    kafkaServer.startAndWait();
+    kafkaServer.startAsync().awaitRunning();
 
     // Initialize kafka producer
     kafkaConsumer = KafkaTestCommon.getConsumer(kafkaPort);
@@ -123,7 +123,7 @@ public class KafkaSinkAndAlertsPublisherTest extends HydratorTestBase {
       kafkaConsumer.close();
     }
     if (kafkaServer != null) {
-      kafkaServer.stopAndWait();
+      kafkaServer.stopAsync().awaitTerminated();
     }
     if (standaloneServerFactory != null) {
       standaloneServerFactory.shutdown();
