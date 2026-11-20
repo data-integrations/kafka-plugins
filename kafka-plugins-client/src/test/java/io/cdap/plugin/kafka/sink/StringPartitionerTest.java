@@ -62,6 +62,33 @@ public class StringPartitionerTest {
     }
   }
 
+  @Test
+  public void testNonPowerOfTwoPartitionCount() throws Exception {
+    String topic = "test-topic";
+    int numPartitions = 7;
+    List<PartitionInfo> partitions = new ArrayList<>(numPartitions);
+    Node node = new Node(0, "localhost", 9092);
+    Node[] nodes = new Node[]{node};
+    for (int i = 0; i < numPartitions; i++) {
+      partitions.add(new PartitionInfo(topic, i, node, nodes, nodes));
+    }
+    Cluster cluster = new Cluster("cluster-id", Collections.singletonList(node), partitions,
+                                  Collections.emptySet(), Collections.emptySet());
+
+    StringPartitioner partitioner = new StringPartitioner();
+    Assert.assertEquals(2, partitioner.partition(topic, "key-1", null, null, null, cluster));
+    Assert.assertEquals(4, partitioner.partition(topic, "key-2", null, null, null, cluster));
+    Assert.assertEquals(4, partitioner.partition(topic, "user-12345", null, null, null, cluster));
+    Assert.assertEquals(5, partitioner.partition(topic, "日本語-key", null, null, null, cluster));
+
+    String[] keys = new String[]{"", "a", "key-1", "key-2", "user-12345", "日本語-key"};
+    for (String key : keys) {
+      int expected = legacyGuava13HashStringPartition(key, numPartitions);
+      Assert.assertEquals("Partition mismatch for key: " + key,
+                          expected, partitioner.partition(topic, key, null, null, null, cluster));
+    }
+  }
+
   private static int legacyGuava13HashStringPartition(CharSequence input, int numPartitions) throws Exception {
     MessageDigest md5 = MessageDigest.getInstance("MD5");
     ByteBuffer buf = ByteBuffer.allocate(input.length() * 2).order(ByteOrder.LITTLE_ENDIAN);
