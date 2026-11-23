@@ -61,6 +61,16 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!--
+      commons-compress 1.26+ (via avro) needs commons-io 2.12+ (e.g. CloseShieldInputStream.wrap in the
+      bzip2 codec). Without a direct dependency Maven mediates to the commons-io 2.4 of the provided
+      hadoop-common, which is not packaged in the plugin jar.
+    -->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.22.0</version>
+    </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.12</artifactId>
@@ -272,7 +282,7 @@
           <instructions>
             <_exportcontents>io.cdap.plugin.kafka.*;org.apache.spark.streaming.kafka010.*;
               org.apache.kafka.*;com.google.common.base.*;</_exportcontents>
-            <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
+            <Embed-Dependency>*;inline=false;scope=compile|runtime</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
             <Embed-Directory>lib</Embed-Directory>
           </instructions>

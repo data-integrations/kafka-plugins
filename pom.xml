@@ -80,15 +80,15 @@
     <spark3.version>3.1.2</spark3.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
-    <kafka.version>2.6.0</kafka.version>
+    <kafka.version>3.9.2</kafka.version>
     <hadoop.version>3.3.6</hadoop.version>
     <netty.version>4.1.75.Final</netty.version>
     <netty-http.version>1.3.0</netty-http.version>
-    <avro.version>1.8.2</avro.version>
+    <avro.version>1.11.5</avro.version>
     <main.basedir>${project.basedir}</main.basedir>
     <logback.version>1.0.9</logback.version>
     <slf4j.version>1.7.25</slf4j.version>
-    <jackson.version>2.10.5.1</jackson.version>
+    <jackson.version>2.23.0</jackson.version>
   </properties>
 
   <dependencyManagement>
@@ -101,6 +101,26 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-text</artifactId>
         <version>1.10.0</version>
+      </dependency>
+      <!-- Align every Jackson 2 module (core, databind, annotations, dataformats, modules). -->
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- avro 1.11.5 brings commons-compress 1.26.2; pinned to the latest release, 1.28.0. -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.28.0</version>
+      </dependency>
+      <!-- kafka-clients 3.9.2 brings snappy-java 1.1.10.5; align with the cross-track target. -->
+      <dependency>
+        <groupId>org.xerial.snappy</groupId>
+        <artifactId>snappy-java</artifactId>
+        <version>1.1.10.12</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -284,7 +304,7 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.9</version>
+      <version>3.22.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>

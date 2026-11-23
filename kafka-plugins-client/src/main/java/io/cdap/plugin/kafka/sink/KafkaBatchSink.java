@@ -251,6 +251,9 @@ public class KafkaBatchSink extends ReferenceBatchSink<StructuredRecord, Text, T
       conf.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getCanonicalName());
 
       KafkaHelpers.setupKerberosLogin(conf, kafkaSinkConfig.principal, kafkaSinkConfig.keytabLocation);
+      // Kafka clients 3.0+ enable idempotence by default, which needs acks=all and IDEMPOTENT_WRITE on the
+      // cluster. Keep the 2.x behavior; users can still turn it on through kafkaProperties.
+      conf.put("additional." + ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "false");
       addKafkaProperties(kafkaSinkConfig.kafkaProperties);
 
       conf.put(ASYNC, kafkaSinkConfig.async);
