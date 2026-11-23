@@ -226,6 +226,21 @@
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
         <version>4.9.2</version>
+        <configuration>
+          <!--
+            scala-maven-plugin compiles the Java sources in this module before maven-compiler-plugin
+            runs, so it ignores the parent's Java 8 source/target settings. Without these args, a
+            JDK 11 build emits Java 11 class files with NestMembers attributes, and the ASM5-based
+            plugin inspector in CDAP 6.11 rejects them with "This feature requires ASM7". The
+            plugin also declares support for CDAP 6.8+, which can still run on Java 8.
+            Using release 8 (rather than source/target 1.8) also compiles against the Java 8
+            platform APIs, so the jar cannot call JDK 9+ only methods.
+          -->
+          <javacArgs>
+            <javacArg>--release</javacArg>
+            <javacArg>8</javacArg>
+          </javacArgs>
+        </configuration>
         <executions>
           <execution>
             <id>compile</id>
