@@ -75,9 +75,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>6.11.0</cdap.version>
+    <cdap.version>6.12.0-SNAPSHOT</cdap.version>
     <cdap.plugin.version>2.11.0</cdap.plugin.version>
-    <spark3.version>3.1.2</spark3.version>
+    <spark3.version>3.3.2</spark3.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
     <kafka.version>3.9.2</kafka.version>
@@ -89,10 +89,16 @@
     <logback.version>1.0.9</logback.version>
     <slf4j.version>1.7.25</slf4j.version>
     <jackson.version>2.23.0</jackson.version>
+    <guava.version>33.8.0-jre</guava.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
       <!--
         Hadoop 3.3.6 commons-configuration2 needs commons-text 1.8+, but Spark 3.1.2 pulls commons-text 1.6
         first. Pin the version Hadoop expects so MapReduce programs in unit tests can load the Hadoop config.
@@ -100,7 +106,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-text</artifactId>
-        <version>1.10.0</version>
+        <version>1.15.0</version>
       </dependency>
       <!-- Align every Jackson 2 module (core, databind, annotations, dataformats, modules). -->
       <dependency>
@@ -309,7 +315,12 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>13.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>

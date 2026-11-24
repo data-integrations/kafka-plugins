@@ -34,7 +34,7 @@ public final class StringPartitioner implements Partitioner {
   public int partition(String topic, Object key, byte[] keyBytes, Object value, byte[] valueBytes, Cluster cluster) {
     List<PartitionInfo> partitions = cluster.partitionsForTopic(topic);
     int numPartitions = partitions.size();
-    return Math.abs(Hashing.md5().hashString(key.toString()).asInt()) % numPartitions;
+    return Math.abs(Hashing.md5().hashUnencodedChars(key.toString()).asInt()) % numPartitions;
   }
 
   @Override
