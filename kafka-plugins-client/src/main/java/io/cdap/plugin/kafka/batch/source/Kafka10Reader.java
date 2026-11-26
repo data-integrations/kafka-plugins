@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.CRC32;
 
 
 /**
@@ -92,9 +93,22 @@ final class Kafka10Reader implements KafkaReader {
     ByteBuffer payload = value == null ? ByteBuffer.wrap(EMPTY_BYTE_ARRAY) : ByteBuffer.wrap(value);
 
     kafkaKey.set(currentOffset, consumerRecord.offset() + 1,
-                 consumerRecord.serializedKeySize() + consumerRecord.serializedValueSize(), consumerRecord.checksum());
+                 consumerRecord.serializedKeySize() + consumerRecord.serializedValueSize(), checksum(consumerRecord));
     currentOffset = consumerRecord.offset() + 1; // increase offset
     return new KafkaMessage(payload, key);
+  }
+
+  /**
+   * Returns a checksum of the record's timestamp and serialized key and value sizes. This is the same partial
+   * checksum that {@code ConsumerRecord.checksum()} returned for v2 records before it was removed in Kafka 3.0
+   * (computed with CRC32 instead of CRC32C). It is only used to order and identify {@link KafkaKey}s.
+   */
+  private static long checksum(ConsumerRecord<byte[], byte[]> record) {
+    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES + 2 * Integer.BYTES);
+    buffer.putLong(record.timestamp()).putInt(record.serializedKeySize()).putInt(record.serializedValueSize());
+    CRC32 crc = new CRC32();
+    crc.update(buffer.array());
+    return crc.getValue();
   }
 
   /**
