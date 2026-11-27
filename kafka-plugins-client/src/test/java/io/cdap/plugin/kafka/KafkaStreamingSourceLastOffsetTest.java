@@ -23,6 +23,7 @@ import io.cdap.cdap.api.artifact.ArtifactSummary;
 import io.cdap.cdap.api.artifact.ArtifactVersion;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.api.dataset.lib.FileSet;
 import io.cdap.cdap.api.dataset.table.Table;
 import io.cdap.cdap.common.utils.Networks;
 import io.cdap.cdap.common.utils.Tasks;
@@ -187,14 +188,18 @@ public class KafkaStreamingSourceLastOffsetTest extends HydratorTestBase {
 
     SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
     sparkManager.start();
-    sparkManager.waitForStatus(true, 10, 1);
-
     // for this test we have to wait for pipeline to be in running state before sending data
-    sparkManager.waitForRun(ProgramRunStatus.RUNNING, 20, TimeUnit.SECONDS);
+    sparkManager.waitForRun(ProgramRunStatus.RUNNING, 2, TimeUnit.MINUTES);
     final DataSetManager<Table> outputManager = getDataset("kafkaOutputLastOffsetTest");
 
+    // Wait for at least one Spark batch checkpoint so KafkaStreamingSource has initialized its
+    // latest offset before additional messages are produced.
+    KafkaTestCommon.waitForCheckpointAfter(
+      () -> this.<FileSet>getDataset("defaultCheckpointDataset").get(),
+      appId.getApplication(),
+      0L);
+
     // Write additional messages into topic
-    TimeUnit.SECONDS.sleep(10);
     messages = new HashMap<>();
     messages.put("a", "1,samuel,jackson");
     messages.put("b", "2,dwayne,johnson");
@@ -213,6 +218,6 @@ public class KafkaStreamingSourceLastOffsetTest extends HydratorTestBase {
       }, 2, TimeUnit.MINUTES);
 
     sparkManager.stop();
-    sparkManager.waitForStatus(false, 10, 1);
+    sparkManager.waitForStopped(2, TimeUnit.MINUTES);
   }
 }

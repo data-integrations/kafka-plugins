@@ -23,6 +23,7 @@ import io.cdap.cdap.api.artifact.ArtifactSummary;
 import io.cdap.cdap.api.artifact.ArtifactVersion;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.api.dataset.lib.FileSet;
 import io.cdap.cdap.api.dataset.table.Table;
 import io.cdap.cdap.common.utils.Networks;
 import io.cdap.cdap.common.utils.Tasks;
@@ -35,6 +36,7 @@ import io.cdap.cdap.etl.mock.test.HydratorTestBase;
 import io.cdap.cdap.etl.proto.v2.DataStreamsConfig;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.etl.proto.v2.ETLStage;
+import io.cdap.cdap.proto.ProgramRunStatus;
 import io.cdap.cdap.proto.artifact.AppRequest;
 import io.cdap.cdap.proto.id.ApplicationId;
 import io.cdap.cdap.proto.id.ArtifactId;
@@ -188,7 +190,7 @@ public class KafkaStreamingSourceBegginingOffsetTest extends HydratorTestBase {
 
     SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
     sparkManager.start();
-    sparkManager.waitForStatus(true, 10, 1);
+    sparkManager.waitForRun(ProgramRunStatus.RUNNING, 2, TimeUnit.MINUTES);
 
     final DataSetManager<Table> outputManager = getDataset("kafkaOutputBeginningOffsetTest");
     Tasks.waitFor(
@@ -202,8 +204,14 @@ public class KafkaStreamingSourceBegginingOffsetTest extends HydratorTestBase {
         return actual;
       }, 2, TimeUnit.MINUTES);
 
+    long afterOutputTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(1);
+    KafkaTestCommon.waitForCheckpointAfter(
+      () -> this.<FileSet>getDataset("defaultCheckpointDataset").get(),
+      appId.getApplication(),
+      afterOutputTime);
+
     sparkManager.stop();
-    sparkManager.waitForStatus(false, 10, 1);
+    sparkManager.waitForStopped(2, TimeUnit.MINUTES);
 
     // clear the output table
     MockSink.clear(outputManager);
@@ -215,7 +223,7 @@ public class KafkaStreamingSourceBegginingOffsetTest extends HydratorTestBase {
     KafkaTestCommon.sendKafkaMessage(kafkaProducer, "usersWithBeginningOffset", messages);
 
     sparkManager.start();
-    sparkManager.waitForStatus(true, 10, 1);
+    sparkManager.waitForRun(ProgramRunStatus.RUNNING, 2, TimeUnit.MINUTES);
 
     Tasks.waitFor(
       ImmutableMap.of(4L, "terry crews", 5L, "sylvester stallone"),
@@ -229,5 +237,6 @@ public class KafkaStreamingSourceBegginingOffsetTest extends HydratorTestBase {
       }, 2, TimeUnit.MINUTES);
 
     sparkManager.stop();
+    sparkManager.waitForStopped(2, TimeUnit.MINUTES);
   }
 }

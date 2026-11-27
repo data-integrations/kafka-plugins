@@ -17,19 +17,28 @@
 package io.cdap.plugin.kafka;
 
 import com.google.common.util.concurrent.Service;
+import io.cdap.cdap.api.dataset.lib.FileSet;
+import io.cdap.cdap.common.utils.Tasks;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.twill.filesystem.Location;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Common methods for all tests
@@ -37,6 +46,8 @@ import java.util.concurrent.TimeoutException;
 public class KafkaTestCommon {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaTestCommon.class);
   private static final long KAFKA_SERVER_TIMEOUT_SECONDS = 30L;
+  private static final Pattern CHECKPOINT_FILE_PATTERN = Pattern.compile("^checkpoint-(\\d+)$");
+  private static final Pattern CHECKPOINT_BACKUP_PATTERN = Pattern.compile("^checkpoint-(\\d+)\\.bk$");
 
   public static void startKafkaServer(Service kafkaServer) throws TimeoutException {
     kafkaServer.startAsync().awaitRunning(KAFKA_SERVER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -96,5 +107,59 @@ public class KafkaTestCommon {
     for (Map.Entry<String, String> entry : messages.entrySet()) {
       kafkaProducer.send(new ProducerRecord<>(topic, entry.getKey(), entry.getValue()));
     }
+    kafkaProducer.flush();
+  }
+
+  /**
+   * Waits until Spark Streaming has written a post-batch-completion checkpoint for a batch strictly
+   * after {@code afterTimeMillis}. In CDAP unit tests, {@code ProgramLifecycleService.stop} stops
+   * Spark with a 0s graceful timeout, causing {@code SparkStreamingPipelineDriver} to stop the
+   * streaming context immediately without waiting for pending batches to finish checkpointing.
+   * Waiting for both {@code checkpoint-<ts>} and {@code checkpoint-<ts>.bk} ensures a batch strictly
+   * after {@code afterTimeMillis} has completed and written its post-completion checkpoint.
+   */
+  public static void waitForCheckpointAfter(Callable<FileSet> checkpointDatasetSupplier,
+                                            String appName,
+                                            long afterTimeMillis) throws Exception {
+    Tasks.waitFor(true, () -> {
+      FileSet checkpointDataset = checkpointDatasetSupplier.call();
+      if (checkpointDataset == null) {
+        return false;
+      }
+      Location appDir = checkpointDataset.getBaseLocation().append(appName);
+      if (!appDir.exists() || !appDir.isDirectory()) {
+        return false;
+      }
+      for (Location pipelineDir : appDir.list()) {
+        if (!pipelineDir.isDirectory()) {
+          continue;
+        }
+        Set<Long> checkpointTimes = new HashSet<>();
+        Set<Long> backupTimes = new HashSet<>();
+        try {
+          for (Location file : pipelineDir.list()) {
+            String name = file.getName();
+            Matcher checkpointMatcher = CHECKPOINT_FILE_PATTERN.matcher(name);
+            if (checkpointMatcher.matches() && file.exists() && file.length() > 0) {
+              checkpointTimes.add(Long.parseLong(checkpointMatcher.group(1)));
+              continue;
+            }
+            Matcher backupMatcher = CHECKPOINT_BACKUP_PATTERN.matcher(name);
+            if (backupMatcher.matches()) {
+              backupTimes.add(Long.parseLong(backupMatcher.group(1)));
+            }
+          }
+        } catch (IOException e) {
+          // Checkpoint files may be renamed or pruned concurrently while listing.
+          return false;
+        }
+        for (Long ts : backupTimes) {
+          if (ts > afterTimeMillis && checkpointTimes.contains(ts)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }, 2, TimeUnit.MINUTES);
   }
 }

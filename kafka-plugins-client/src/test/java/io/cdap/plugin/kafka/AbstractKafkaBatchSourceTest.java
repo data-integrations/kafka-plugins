@@ -337,5 +337,6 @@ public abstract class AbstractKafkaBatchSourceTest extends HydratorTestBase {
     for (Map.Entry<String, String> entry : messages.entrySet()) {
       kafkaProducer.send(new ProducerRecord<>(topic, entry.getKey(), entry.getValue()));
     }
+    kafkaProducer.flush();
   }
 }
