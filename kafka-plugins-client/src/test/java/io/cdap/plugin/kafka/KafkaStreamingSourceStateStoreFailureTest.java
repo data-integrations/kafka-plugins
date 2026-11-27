@@ -126,7 +126,7 @@ public class KafkaStreamingSourceStateStoreFailureTest extends HydratorTestBase 
     kafkaServer = new EmbeddedKafkaServer(KafkaTestCommon.generateKafkaConfig(zkConnectionString,
                                                                               kafkaPort,
                                                                               TMP_FOLDER.newFolder()));
-    kafkaServer.startAndWait();
+    KafkaTestCommon.startKafkaServer(kafkaServer);
 
     // Initialize kafka producer
     kafkaProducer = KafkaTestCommon.getProducer(kafkaPort);
@@ -139,7 +139,7 @@ public class KafkaStreamingSourceStateStoreFailureTest extends HydratorTestBase 
       kafkaProducer.close();
     }
     if (kafkaServer != null) {
-      kafkaServer.stopAndWait();
+      KafkaTestCommon.stopKafkaServer(kafkaServer);
     }
     if (standaloneServerFactory != null) {
       standaloneServerFactory.shutdown();

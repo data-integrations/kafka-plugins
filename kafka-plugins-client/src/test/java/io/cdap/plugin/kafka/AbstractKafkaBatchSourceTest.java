@@ -117,7 +117,7 @@ public abstract class AbstractKafkaBatchSourceTest extends HydratorTestBase {
     // Initialize kafka server
     kafkaPort = Networks.getRandomPort();
     kafkaServer = new EmbeddedKafkaServer(generateKafkaConfig(zkConnectionString, kafkaPort, TMP_FOLDER.newFolder()));
-    kafkaServer.startAndWait();
+    KafkaTestCommon.startKafkaServer(kafkaServer);
 
     // Initialize kafka producer
     kafkaProducer = KafkaTestCommon.getProducer(kafkaPort);
@@ -129,7 +129,7 @@ public abstract class AbstractKafkaBatchSourceTest extends HydratorTestBase {
       kafkaProducer.close();
     }
     if (kafkaServer != null) {
-      kafkaServer.stopAndWait();
+      KafkaTestCommon.stopKafkaServer(kafkaServer);
     }
     if (standaloneServerFactory != null) {
       standaloneServerFactory.shutdown();
