@@ -16,20 +16,42 @@
 
 package io.cdap.plugin.kafka;
 
+import com.google.common.util.concurrent.Service;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Common methods for all tests
  */
 public class KafkaTestCommon {
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaTestCommon.class);
+  private static final long KAFKA_SERVER_TIMEOUT_SECONDS = 30L;
+
+  public static void startKafkaServer(Service kafkaServer) throws TimeoutException {
+    kafkaServer.startAsync().awaitRunning(KAFKA_SERVER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+  }
+
+  public static void stopKafkaServer(Service kafkaServer) {
+    if (kafkaServer == null) {
+      return;
+    }
+    try {
+      kafkaServer.stopAsync().awaitTerminated(KAFKA_SERVER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    } catch (IllegalStateException | TimeoutException e) {
+      LOG.warn("Failed to stop embedded Kafka server cleanly", e);
+    }
+  }
 
   public static Properties generateKafkaConfig(String zkConnectStr, int port, File logDir) {
     Properties prop = new Properties();

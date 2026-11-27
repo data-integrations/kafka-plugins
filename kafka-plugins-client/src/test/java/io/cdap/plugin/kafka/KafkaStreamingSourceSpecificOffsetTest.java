@@ -127,7 +127,7 @@ public class KafkaStreamingSourceSpecificOffsetTest extends HydratorTestBase {
     kafkaServer = new EmbeddedKafkaServer(KafkaTestCommon.generateKafkaConfig(zkConnectionString,
                                                                               kafkaPort,
                                                                               TMP_FOLDER.newFolder()));
-    kafkaServer.startAsync().awaitRunning();
+    KafkaTestCommon.startKafkaServer(kafkaServer);
 
     // Initialize kafka producer
     kafkaProducer = KafkaTestCommon.getProducer(kafkaPort);
@@ -139,7 +139,7 @@ public class KafkaStreamingSourceSpecificOffsetTest extends HydratorTestBase {
       kafkaProducer.close();
     }
     if (kafkaServer != null) {
-      kafkaServer.stopAsync().awaitTerminated();
+      KafkaTestCommon.stopKafkaServer(kafkaServer);
     }
     if (standaloneServerFactory != null) {
       standaloneServerFactory.shutdown();

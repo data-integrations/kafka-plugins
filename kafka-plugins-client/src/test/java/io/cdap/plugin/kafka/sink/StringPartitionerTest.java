@@ -89,6 +89,21 @@ public class StringPartitionerTest {
     }
   }
 
+  @Test
+  public void testNullKeyReturnsZero() {
+    String topic = "test-topic";
+    Node node = new Node(0, "localhost", 9092);
+    Node[] nodes = new Node[]{node};
+    List<PartitionInfo> partitions = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      partitions.add(new PartitionInfo(topic, i, node, nodes, nodes));
+    }
+    Cluster cluster = new Cluster("cluster-id", Collections.singletonList(node), partitions,
+                                  Collections.emptySet(), Collections.emptySet());
+    StringPartitioner partitioner = new StringPartitioner();
+    Assert.assertEquals(0, partitioner.partition(topic, null, null, null, null, cluster));
+  }
+
   private static int legacyGuava13HashStringPartition(CharSequence input, int numPartitions) throws Exception {
     MessageDigest md5 = MessageDigest.getInstance("MD5");
     ByteBuffer buf = ByteBuffer.allocate(input.length() * 2).order(ByteOrder.LITTLE_ENDIAN);
