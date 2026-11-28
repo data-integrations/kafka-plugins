@@ -35,6 +35,7 @@ import io.cdap.cdap.etl.mock.test.HydratorTestBase;
 import io.cdap.cdap.etl.proto.v2.DataStreamsConfig;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.etl.proto.v2.ETLStage;
+import io.cdap.cdap.proto.ProgramRunStatus;
 import io.cdap.cdap.proto.artifact.AppRequest;
 import io.cdap.cdap.proto.id.ApplicationId;
 import io.cdap.cdap.proto.id.ArtifactId;
@@ -189,7 +190,7 @@ public class KafkaStreamingSourceSpecificOffsetTest extends HydratorTestBase {
 
     SparkManager sparkManager = appManager.getSparkManager(DataStreamsSparkLauncher.NAME);
     sparkManager.start();
-    sparkManager.waitForStatus(true, 10, 1);
+    sparkManager.waitForRun(ProgramRunStatus.RUNNING, 2, TimeUnit.MINUTES);
 
     final DataSetManager<Table> outputManager = getDataset("kafkaOutputSpecificOffsetTest");
     Tasks.waitFor(
@@ -204,6 +205,6 @@ public class KafkaStreamingSourceSpecificOffsetTest extends HydratorTestBase {
       }, 2, TimeUnit.MINUTES);
 
     sparkManager.stop();
-    sparkManager.waitForStatus(false, 10, 1);
+    sparkManager.waitForStopped(2, TimeUnit.MINUTES);
   }
 }
